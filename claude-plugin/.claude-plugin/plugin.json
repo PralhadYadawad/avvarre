@@ -1,0 +1,13 @@
+{
+  "name": "avvarre",
+  "description": "The trust layer for AI-assisted coding. Enforces Google Style Guides across 21 languages via MCP, with persistent project memory, fix-verify loops, and workspace heatmaps.",
+  "version": "0.5.1",
+  "author": {
+    "name": "Pralhad R Yadawad"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/PralhadYadawad/avvarre",
+  "repository": "https://github.com/PralhadYadawad/avvarre",
+  "keywords": ["code-quality", "google-style-guide", "linter", "ai-memory", "mcp", "code-review"],
+  "logo": "logo.png"
+}

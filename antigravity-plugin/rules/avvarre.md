@@ -1,0 +1,48 @@
+---
+description: avvarre code quality rules — applies Google style guide enforcement to all source files
+globs:
+  - "**/*.py"
+  - "**/*.js"
+  - "**/*.ts"
+  - "**/*.tsx"
+  - "**/*.jsx"
+  - "**/*.java"
+  - "**/*.go"
+  - "**/*.cpp"
+  - "**/*.cc"
+  - "**/*.kt"
+  - "**/*.dart"
+  - "**/*.swift"
+  - "**/*.cs"
+  - "**/*.sh"
+  - "**/*.html"
+  - "**/*.css"
+  - "**/*.md"
+  - "**/*.json"
+---
+
+# avvarre — Code Quality Rules
+
+When working on any source file, follow Google Style Guide conventions for that language.
+
+## Automatic Enforcement
+
+avvarre MCP tools enforce 650+ rules at analysis time. Use `/avvarre` on the active file to get a quality score and violation list.
+
+## Core Conventions
+
+- **Never silently swallow errors** — log or re-throw with context
+- **Max 1500 lines per file** — split if exceeded
+- **Naming**: `camelCase` functions, `PascalCase` classes, `UPPER_SNAKE_CASE` constants
+- **Comments explain WHY** — not what the code does
+
+## Before Committing
+
+Run `/avvarre-pr` to scan only changed files. Aim for score 85+ per file. Fix any critical or high violations before pushing.
+
+## Project Memory
+
+If a `.avvarre/` directory exists:
+- Read `conventions.md` before writing code
+- Check `tasks.md` to understand current work
+- Update `tasks.md` when completing work (compressed format)

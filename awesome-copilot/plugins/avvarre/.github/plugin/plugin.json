@@ -1,0 +1,18 @@
+{
+  "name": "avvarre",
+  "description": "Persistent AI memory and 650+ Google Style Guide rules across 21 languages. Autonomous fix-verify loops, compressed task sync, workspace heatmaps.",
+  "version": "0.5.1",
+  "keywords": ["code-quality", "google-style-guide", "linter", "ai-memory", "mcp", "avvarre"],
+  "author": { "name": "Pralhad R Yadawad" },
+  "repository": "https://github.com/github/awesome-copilot",
+  "license": "MIT",
+  "agents": ["./agents/avvarre-reviewer.agent.md"],
+  "commands": [
+    "./commands/avvarre-init.md",
+    "./commands/avvarre.md",
+    "./commands/avvarre-workspace.md",
+    "./commands/avvarre-pr.md",
+    "./commands/avvarre-autopilot.md"
+  ],
+  "skills": ["./skills/avvarre/"]
+}

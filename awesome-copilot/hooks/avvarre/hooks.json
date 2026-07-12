@@ -1,0 +1,30 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "${CLAUDE_PLUGIN_ROOT}/hook-bootstrap.cjs"
+      },
+      {
+        "type": "command",
+        "command": "${CLAUDE_PLUGIN_ROOT}/hook-context-loader.cjs"
+      },
+      {
+        "type": "command",
+        "command": "${CLAUDE_PLUGIN_ROOT}/hook-skill-suggest.cjs"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "type": "command",
+        "command": "node \"${CLAUDE_PLUGIN_ROOT}/hook-impact-warn.cjs\""
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "${CLAUDE_PLUGIN_ROOT}/hook-session-end.cjs"
+      }
+    ]
+  }
+}

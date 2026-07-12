@@ -1,0 +1,8 @@
+node_modules/
+dist/
+*.log
+.env
+.avvarre/graph.db*
+.avvarre/history.json
+.avvarre/.session-state.json
+.avvarre/session-log.md

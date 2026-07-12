@@ -1,0 +1,31 @@
+{
+  "avvarre-pre-invocation": {
+    "PreInvocation": [
+      {
+        "type": "command",
+        "command": "node ./scripts/hook-pre-invocation.cjs"
+      }
+    ]
+  },
+  "avvarre-impact-warn": {
+    "PreToolUse": [
+      {
+        "matcher": "write_to_file|replace_file_content|multi_replace_file_content",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ./scripts/hook-impact-warn.cjs"
+          }
+        ]
+      }
+    ]
+  },
+  "avvarre-session-end": {
+    "Stop": [
+      {
+        "type": "command",
+        "command": "node ./scripts/hook-session-end.cjs"
+      }
+    ]
+  }
+}

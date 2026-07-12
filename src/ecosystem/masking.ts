@@ -1,0 +1,139 @@
+import { existsSync, writeFileSync, mkdirSync, unlinkSync } from 'fs';
+import { join } from 'path';
+
+export type VibeMode = 'frontend' | 'backend' | 'database' | 'feature' | 'full';
+
+/**
+ * Runtime-only context masking file. This file is NOT the user's .avvarre/ignore
+ * (which is committed to git). Instead it's a separate ephemeral file that the
+ * workspace scanner merges at runtime. It should be added to .gitignore.
+ */
+export const VIBE_CONTEXT_FILENAME = '.vibe_context';
+
+const FRONTEND_GLOBS = [
+    'src/frontend/',
+    'src/components/',
+    'src/app/',
+    'src/views/',
+    'public/',
+    '*.tsx',
+    '*.jsx',
+    '*.css',
+    '*.scss',
+    '*.less',
+    '.avvarre/skills/frontend*',
+    '.avvarre/skills/ui*',
+    '.avvarre/skills/react*',
+    '.avvarre/skills/vue*'
+];
+
+const BACKEND_GLOBS = [
+    'src/backend/',
+    'src/api/',
+    'src/server/',
+    'src/controllers/',
+    'src/services/',
+    '*.go',
+    '*.py',
+    '*.java',
+    '*.cs',
+    '*.php',
+    '.avvarre/skills/backend*',
+    '.avvarre/skills/api*'
+];
+
+const DATABASE_GLOBS = [
+    'db/',
+    'prisma/',
+    'migrations/',
+    'sql/',
+    '*.sql',
+    '.avvarre/skills/db*',
+    '.avvarre/skills/sql*',
+    '.avvarre/skills/prisma*'
+];
+
+/**
+ * Sets the active vibe context mode by writing masking globs to a
+ * runtime-only file (.avvarre/.vibe_context). This file is separate
+ * from the user's .avvarre/ignore so that masking state is never
+ * accidentally committed to version control.
+ *
+ * Returns a system instruction string to send back to the LLM.
+ */
+export function setVibeContext(workspaceRoot: string, mode: VibeMode, featureName?: string): string {
+    const avvarreDir = join(workspaceRoot, '.avvarre');
+    if (!existsSync(avvarreDir)) {
+        mkdirSync(avvarreDir, { recursive: true });
+    }
+
+    const contextFile = join(avvarreDir, VIBE_CONTEXT_FILENAME);
+
+    let maskGlobs: string[] = [];
+    let instructions = '';
+
+    switch (mode) {
+        case 'feature':
+            if (!featureName) {
+                return `Error: You must provide a featureName when setting the mode to 'feature'.`;
+            }
+            maskGlobs = [
+                `src/*/`,
+                `!src/*${featureName}*/`,
+                `!src/shared/`,
+                `!src/utils/`,
+                `!src/core/`,
+                `!src/types/`,
+                `!src/config/`,
+                `!src/db/`,
+                `.avvarre/skills/*`,
+                `!.avvarre/skills/*${featureName}*.md`
+            ];
+            instructions = `Vibe Context set to: FEATURE (${featureName}).
+AI INSTRUCTION: I have just dynamically masked OUT all other feature directories in the workspace.
+You are now in Feature Isolation Mode for '${featureName}'.
+Crucially, top-level entry points (like server.ts, index.ts) and shared architecture (src/utils, src/types, src/shared) REMAIN VISIBLE so you can wire up your feature.
+Please drop all unrelated logic from your context memory and focus entirely on the implementation and integration of ${featureName}.`;
+            break;
+        case 'frontend':
+            maskGlobs = [...BACKEND_GLOBS, ...DATABASE_GLOBS];
+            instructions = `Vibe Context set to: FRONTEND.
+AI INSTRUCTION: I have just dynamically masked Backend and Database files from the workspace scanner.
+You are now in Frontend Mode.
+Please drop any backend logic or database schemas from your context memory immediately to save tokens. Focus entirely on UI, state management, and frontend architecture.`;
+            break;
+        case 'backend':
+            maskGlobs = [...FRONTEND_GLOBS, ...DATABASE_GLOBS];
+            instructions = `Vibe Context set to: BACKEND.
+AI INSTRUCTION: I have just dynamically masked Frontend and HTML/CSS files from the workspace scanner.
+You are now in Backend Mode.
+Please drop any React/UI components or styling from your context memory immediately to save tokens. Focus entirely on API routes, business logic, and server architecture.`;
+            break;
+        case 'database':
+            maskGlobs = [...FRONTEND_GLOBS, ...BACKEND_GLOBS.filter(g => !g.includes('api'))];
+            instructions = `Vibe Context set to: DATABASE.
+AI INSTRUCTION: I have just dynamically masked UI and Core Server logic from the workspace scanner.
+You are now in Database Mode.
+Please drop any UI or unrelated API controllers from your context memory immediately. Focus entirely on SQL queries, schema migrations, and ORM layer.`;
+            break;
+        case 'full':
+        default:
+            maskGlobs = [];
+            instructions = `Vibe Context set to: FULL (Masking Disabled).
+AI INSTRUCTION: All context masking has been removed. You now have full visibility into the entire codebase, including Frontend, Backend, and Database files.`;
+            break;
+    }
+
+    if (maskGlobs.length > 0) {
+        const content = `# Runtime vibe context masking — auto-generated by set_vibe_context('${mode}').\n# This file should NOT be committed to git. Add .avvarre/.vibe_context to .gitignore.\n` +
+            maskGlobs.join('\n') + '\n';
+        writeFileSync(contextFile, content, 'utf-8');
+    } else {
+        // Full mode: remove the context file entirely
+        if (existsSync(contextFile)) {
+            unlinkSync(contextFile);
+        }
+    }
+
+    return instructions;
+}

@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "sessionStart": [
+      {
+        "command": "./scripts/hook-bootstrap.cjs"
+      },
+      {
+        "command": "./scripts/hook-context-loader.cjs"
+      },
+      {
+        "command": "./scripts/hook-skill-suggest.cjs"
+      }
+    ],
+    "preToolUse": [
+      {
+        "command": "node ./scripts/hook-impact-warn.cjs"
+      }
+    ],
+    "sessionEnd": [
+      {
+        "command": "./scripts/hook-session-end.cjs"
+      }
+    ]
+  }
+}
