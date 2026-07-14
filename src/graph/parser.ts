@@ -6,8 +6,15 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Find the node_modules folder relative to this file
-const wasmDir = join(__dirname, '..', '..', 'node_modules', 'tree-sitter-wasms', 'out');
+// Find the node_modules folder relative to this file (handles both nested and flat layouts)
+let wasmDir = join(__dirname, '..', '..', 'node_modules', 'tree-sitter-wasms', 'out');
+if (!existsSync(wasmDir)) {
+    // Try flat layout fallback: node_modules/tree-sitter-wasms
+    const flatPath = join(__dirname, '..', '..', '..', 'tree-sitter-wasms', 'out');
+    if (existsSync(flatPath)) {
+        wasmDir = flatPath;
+    }
+}
 
 // Map extensions to their grammar wasm names
 const extensionToLanguageWasm: Record<string, string> = {

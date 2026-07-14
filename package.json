@@ -76,6 +76,9 @@
     "developer-experience"
   ],
   "license": "MIT",
+  "engines": {
+    "node": ">=22.5.0"
+  },
   "dependencies": {
     "@google/generative-ai": "0.21.0",
     "@modelcontextprotocol/sdk": "1.27.1",
