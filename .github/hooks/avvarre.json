@@ -1,0 +1,20 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "node \"./scripts/hook-bootstrap.cjs\""
+      },
+      {
+        "type": "command",
+        "command": "node \"./scripts/hook-context-loader.cjs\""
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "node \"./scripts/hook-session-end.cjs\""
+      }
+    ]
+  }
+}

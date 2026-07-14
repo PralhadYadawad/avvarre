@@ -1,0 +1,5 @@
+# Exclude dev test and debug files compiled into dist/
+dist/test-*
+dist/debug_*
+dist/diag-*
+dist/verify-*
