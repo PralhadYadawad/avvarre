@@ -281,14 +281,11 @@ export const AvvarrePlugin: Plugin = async ({ project, client, $, directory, wor
             console.log(`- ${warn}`);
           }
         }
-      }
-    },
-
-    // TUI Slash Command execution interceptors
+          // TUI Slash Command execution interceptors
     "tui.command.execute": async (input, output) => {
       const command = input.command.trim();
-
-      if (command.startsWith("/avvarre:init")) {
+ 
+      if (command.startsWith("/avvarre:init") || command.startsWith("/avvarre-init")) {
         output.intercepted = true;
         console.log("[Avvarre] Scaffolding .avvarre/ memory structure...");
         const res = await client.mcp.callTool({
@@ -296,7 +293,7 @@ export const AvvarrePlugin: Plugin = async ({ project, client, $, directory, wor
           arguments: {}
         });
         console.log(res);
-      } else if (command.startsWith("/avvarre:pr")) {
+      } else if (command.startsWith("/avvarre:pr") || command.startsWith("/avvarre-pr")) {
         output.intercepted = true;
         console.log("[Avvarre] Running PR quality gate on changed files...");
         const res = await client.mcp.callTool({
@@ -304,7 +301,7 @@ export const AvvarrePlugin: Plugin = async ({ project, client, $, directory, wor
           arguments: {}
         });
         console.log(res);
-      } else if (command.startsWith("/avvarre:workspace")) {
+      } else if (command.startsWith("/avvarre:workspace") || command.startsWith("/avvarre-workspace")) {
         output.intercepted = true;
         console.log("[Avvarre] Auditing the entire workspace...");
         const res = await client.mcp.callTool({
@@ -312,7 +309,7 @@ export const AvvarrePlugin: Plugin = async ({ project, client, $, directory, wor
           arguments: {}
         });
         console.log(res);
-      } else if (command.startsWith("/avvarre:garden")) {
+      } else if (command.startsWith("/avvarre:garden") || command.startsWith("/avvarre-garden")) {
         output.intercepted = true;
         console.log("[Avvarre] Auditing persistent memory folders (.avvarre/)...");
         const res = await client.mcp.callTool({
@@ -320,9 +317,12 @@ export const AvvarrePlugin: Plugin = async ({ project, client, $, directory, wor
           arguments: { workspaceRoot: directory }
         });
         console.log(res);
-      } else if (command.startsWith("/avvarre:autopilot")) {
+      } else if (command.startsWith("/avvarre:autopilot") || command.startsWith("/avvarre-autopilot")) {
         output.intercepted = true;
         console.log("[Avvarre] Initializing refactoring autopilot loop...");
+      } else if (command === "/avvarre") {
+        output.intercepted = true;
+        console.log("[Avvarre] Supported Commands:\n  - /avvarre-init (or :init) - Scaffold memory\n  - /avvarre-workspace (or :workspace) - Scan workspace\n  - /avvarre-pr (or :pr) - Review git changes\n  - /avvarre-garden (or :garden) - Audit memory folder\n  - /avvarre-autopilot (or :autopilot) - Run autopilot fixes");
       }
     }
   };
