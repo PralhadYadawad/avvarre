@@ -37,7 +37,7 @@ export interface InstallResult {
     created: string[];
     skipped: string[];
     detected: IdeDetection[];
-    mode: 'project' | 'global';
+    mode: 'local' | 'global' | 'both';
 }
 
 /** IDE names accepted as filter flags (--cursor, --claude, --vscode) */
@@ -171,12 +171,14 @@ function commandExists(cmd: string): boolean {
  */
 export async function runInstall(
     workspaceRoot: string,
-    opts: { global?: boolean; filter?: string[] } = {},
+    opts: { global?: boolean; mode?: 'global' | 'local' | 'both'; filter?: string[] } = {},
 ): Promise<InstallResult> {
     const created: string[] = [];
     const skipped: string[] = [];
     const detected = detectInstalledIDEs();
-    const mode: InstallResult['mode'] = opts.global ? 'global' : 'project';
+    
+    // Default to 'both' unless specified otherwise. Keep global flag support.
+    let mode: InstallResult['mode'] = opts.mode || (opts.global !== undefined ? (opts.global ? 'global' : 'local') : 'both');
 
     for (const ide of detected) {
         // If a filter is set, only process matching IDEs
@@ -185,27 +187,30 @@ export async function runInstall(
         if (!opts.filter && !ide.detected) continue;
 
         if (ide.name === 'Claude Code') {
-            if (mode === 'global') {
+            if (mode === 'global' || mode === 'both') {
                 const claudeResult = await setupClaudeGlobal();
                 created.push(...claudeResult.created);
                 skipped.push(...claudeResult.skipped);
                 installClaudeHooks(created, skipped);
-            } else {
+            }
+            if (mode === 'local' || mode === 'both') {
                 const claudeResult = await setupClaudeCode(workspaceRoot);
                 created.push(...claudeResult.created);
                 skipped.push(...claudeResult.skipped);
             }
         } else if (ide.name === 'Antigravity') {
-            if (mode === 'global') {
+            if (mode === 'global' || mode === 'both') {
                 installAntigravityGlobal(created, skipped);
-            } else {
+            }
+            if (mode === 'local' || mode === 'both') {
                 installAntigravityLocal(workspaceRoot, created, skipped);
             }
         } else if (ide.name === 'Cursor') {
-            if (mode === 'global') {
+            if (mode === 'global' || mode === 'both') {
                 writeMcpConfig(ide.configPath, 'Cursor (global)', created, skipped);
                 installCursorGlobal(created, skipped);
-            } else {
+            }
+            if (mode === 'local' || mode === 'both') {
                 const localDir = join(workspaceRoot, '.cursor');
                 if (!existsSync(localDir)) mkdirSync(localDir, { recursive: true });
                 writeMcpConfig(join(localDir, 'mcp.json'), 'Cursor', created, skipped);
@@ -213,10 +218,11 @@ export async function runInstall(
             }
         } else if (ide.name === 'VS Code + GitHub Copilot') {
             const vscodeUserDir = dirname(ide.configPath);
-            if (mode === 'global') {
+            if (mode === 'global' || mode === 'both') {
                 writeMcpConfig(ide.configPath, 'VS Code + GitHub Copilot (global)', created, skipped);
                 installVSCodeGlobal(vscodeUserDir, created, skipped);
-            } else {
+            }
+            if (mode === 'local' || mode === 'both') {
                 const localDir = join(workspaceRoot, '.vscode');
                 if (!existsSync(localDir)) mkdirSync(localDir, { recursive: true });
                 writeMcpConfig(join(localDir, 'mcp.json'), 'VS Code + GitHub Copilot', created, skipped);
@@ -229,13 +235,13 @@ export async function runInstall(
             writeContinueConfig(ide.configPath, created, skipped);
         } else if (ide.name === 'OpenCode') {
             writeMcpConfig(ide.configPath, 'OpenCode', created, skipped);
-            if (mode === 'global') {
+            if (mode === 'global' || mode === 'both') {
                 installOpenCodeGlobal(created, skipped);
             }
         }
     }
 
-    if (mode === 'project') {
+    if (mode === 'local' || mode === 'both') {
         injectCursorRules(workspaceRoot, created, skipped);
         injectClaudeMd(workspaceRoot, created, skipped);
 

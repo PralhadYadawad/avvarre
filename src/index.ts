@@ -58,7 +58,14 @@ function detectLanguage(filePath: string): Language | null {
 }
 
 if (subcommand === 'install') {
-    const isGlobal = !flags.includes('--local');
+    let mode: 'global' | 'local' | 'both' = 'both';
+    if (flags.includes('--global')) {
+        mode = 'global';
+    } else if (flags.includes('--local')) {
+        mode = 'local';
+    } else if (flags.includes('--both')) {
+        mode = 'both';
+    }
     const targetDir = resolve(flags.find(f => !f.startsWith('--')) || '.');
 
     // Collect per-IDE filters from flags like --cursor, --claude, --vscode
@@ -89,7 +96,7 @@ if (subcommand === 'install') {
         process.exit(0);
     }
 
-    runInstall(targetDir, { global: isGlobal, filter: ideFilter.length > 0 ? ideFilter : undefined }).then((result) => {
+    runInstall(targetDir, { mode, filter: ideFilter.length > 0 ? ideFilter : undefined }).then((result) => {
         if (result.created.length > 0) {
             console.log('  Configured:');
             for (const f of result.created) {
@@ -106,7 +113,12 @@ if (subcommand === 'install') {
         }
         console.log('  Done! Open any detected IDE and run /avvarre-init to set up project memory.');
         console.log('');
-        if (!result.created.some(f => f.includes('cursor-plugin/') || f.includes('claude-plugin/') || f.includes('antigravity-plugin/') || f.includes('awesome-copilot/'))) {
+        const hasPluginInstalled = result.created.some(f => 
+            f.toLowerCase().includes('plugin') || 
+            f.toLowerCase().includes('commands/') || 
+            f.toLowerCase().includes('mcp.json')
+        );
+        if (!hasPluginInstalled) {
             console.log('  To install agent plugins (hooks + slash commands + skills):');
             console.log('    Claude Code: copy claude-plugin/ → https://github.com/PralhadYadawad/avvarre');
             console.log('    Copilot:     copy awesome-copilot/ → https://github.com/PralhadYadawad/avvarre');
