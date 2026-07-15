@@ -1,7 +1,10 @@
 import type { Plugin } from "@opencode-ai/plugin";
-import fs from "fs";
-import path from "path";
-import os from "os";
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
 
 // Generate a unique session ID for the lifetime of this process
 const shortSession = Math.random().toString(36).substring(2, 10);
@@ -281,7 +284,9 @@ export const AvvarrePlugin: Plugin = async ({ project, client, $, directory, wor
             console.log(`- ${warn}`);
           }
         }
-          // TUI Slash Command execution interceptors
+      }
+    },
+    // TUI Slash Command execution interceptors
     "tui.command.execute": async (input, output) => {
       const command = input.command.trim();
  
@@ -417,3 +422,5 @@ function runLightweightGarden(cwd: string): string[] {
 
   return warnings;
 }
+
+export default AvvarrePlugin;

@@ -138,12 +138,17 @@ export function detectInstalledIDEs(): IdeDetection[] {
     });
 
     // OpenCode
-    const opencodeDir = join(home, '.opencode');
+    const opencodeConfigDir = join(home, '.config', 'opencode');
+    const opencodeLegacyDir = join(home, '.opencode');
     results.push({
         name: 'OpenCode',
-        detected: existsSync(opencodeDir) || commandExists('opencode'),
-        configPath: join(opencodeDir, 'config.json'),
-        reason: existsSync(opencodeDir) ? '~/.opencode/ found' : 'opencode in PATH',
+        detected: existsSync(opencodeConfigDir) || existsSync(opencodeLegacyDir) || commandExists('opencode'),
+        configPath: join(opencodeConfigDir, 'opencode.json'),
+        reason: existsSync(opencodeConfigDir)
+            ? '~/.config/opencode/ found'
+            : existsSync(opencodeLegacyDir)
+                ? '~/.opencode/ found'
+                : 'opencode in PATH',
     });
 
     return results;
@@ -177,8 +182,8 @@ export async function runInstall(
     const skipped: string[] = [];
     const detected = detectInstalledIDEs();
     
-    // Default to 'both' unless specified otherwise. Keep global flag support.
-    let mode: InstallResult['mode'] = opts.mode || (opts.global !== undefined ? (opts.global ? 'global' : 'local') : 'both');
+    // Default to 'global' unless specified otherwise. Keep global flag support.
+    let mode: InstallResult['mode'] = opts.mode || (opts.global !== undefined ? (opts.global ? 'global' : 'local') : 'global');
 
     for (const ide of detected) {
         // If a filter is set, only process matching IDEs
@@ -226,7 +231,7 @@ export async function runInstall(
                 const localDir = join(workspaceRoot, '.vscode');
                 if (!existsSync(localDir)) mkdirSync(localDir, { recursive: true });
                 writeMcpConfig(join(localDir, 'mcp.json'), 'VS Code + GitHub Copilot', created, skipped);
-                installVSCodeLocal(workspaceRoot, created, skipped);
+                installVSCodeLocal(workspaceRoot, vscodeUserDir, created, skipped);
             }
 
         } else if (ide.name === 'Zed') {
@@ -234,9 +239,14 @@ export async function runInstall(
         } else if (ide.name === 'Continue') {
             writeContinueConfig(ide.configPath, created, skipped);
         } else if (ide.name === 'OpenCode') {
-            writeMcpConfig(ide.configPath, 'OpenCode', created, skipped);
             if (mode === 'global' || mode === 'both') {
+                writeOpenCodeConfig(ide.configPath, created, skipped);
                 installOpenCodeGlobal(created, skipped);
+            }
+            if (mode === 'local' || mode === 'both') {
+                const localConfigPath = join(workspaceRoot, 'opencode.json');
+                writeOpenCodeConfig(localConfigPath, created, skipped);
+                installOpenCodeLocal(workspaceRoot, created, skipped);
             }
         }
     }
@@ -244,24 +254,6 @@ export async function runInstall(
     if (mode === 'local' || mode === 'both') {
         injectCursorRules(workspaceRoot, created, skipped);
         injectClaudeMd(workspaceRoot, created, skipped);
-
-        // Copy agent plugins from npm package for each detected (or filtered) IDE
-        const targetNames = opts.filter ?? detected.filter(d => d.detected).map(d => d.name);
-        if (targetNames.includes('Cursor')) {
-            copyPlugin(workspaceRoot, 'cursor-plugin', 'cursor-plugin', 'Cursor', created, skipped);
-        }
-        if (targetNames.includes('Claude Code')) {
-            copyPlugin(workspaceRoot, 'claude-plugin', 'claude-plugin', 'Claude Code', created, skipped);
-        }
-        if (targetNames.includes('VS Code + GitHub Copilot')) {
-            copyPlugin(workspaceRoot, 'awesome-copilot', 'awesome-copilot', 'VS Code + GitHub Copilot', created, skipped);
-        }
-        if (targetNames.includes('Antigravity')) {
-            copyPlugin(workspaceRoot, 'antigravity-plugin', '.agents/plugins/avvarre', 'Antigravity', created, skipped);
-        }
-        if (targetNames.includes('OpenCode')) {
-            copyPlugin(workspaceRoot, 'opencode-plugin', '.opencode', 'OpenCode', created, skipped);
-        }
     }
 
     return { created, skipped, detected, mode };
@@ -520,13 +512,12 @@ function installVSCodeGlobal(vscodeUserDir: string, created: string[], skipped: 
 }
 
 /**
- * Local VS Code + GitHub Copilot install: adds the local awesome-copilot/ path to
+ * Local VS Code + GitHub Copilot install: adds the global avvarre path to
  * chat.plugins.paths in .vscode/settings.json.
- * The plugin folder itself is handled by copyPlugin() at the end of runInstall.
  */
-function installVSCodeLocal(workspaceRoot: string, created: string[], skipped: string[]): void {
+function installVSCodeLocal(workspaceRoot: string, vscodeUserDir: string, created: string[], skipped: string[]): void {
     const settingsPath = join(workspaceRoot, '.vscode', 'settings.json');
-    const pluginPath = join(workspaceRoot, 'awesome-copilot');
+    const pluginPath = join(vscodeUserDir, '..', 'avvarre');
     mergeVSCodePluginPath(settingsPath, pluginPath, '.vscode/settings.json', created, skipped);
 }
 
@@ -706,21 +697,87 @@ function installAntigravityLocal(workspaceRoot: string, created: string[], skipp
 /**
  * Global OpenCode install: copies the plugin (hooks + package.json) to ~/.config/opencode/plugins/avvarre/
  */
+/**
+ * Writes or merges OpenCode's native mcp config structure.
+ */
+function writeOpenCodeConfig(
+    configPath: string,
+    created: string[],
+    skipped: string[],
+): void {
+    const opencodeEntry = {
+        type: 'local',
+        command: ['npx', '-y', 'avvarre@latest'],
+        enabled: true,
+    };
+
+    if (existsSync(configPath)) {
+        try {
+            const existing = JSON.parse(readFileSync(configPath, 'utf-8'));
+            if (existing.mcp?.avvarre) {
+                skipped.push(`${configPath} (avvarre already registered)`);
+                return;
+            }
+            existing.mcp = existing.mcp || {};
+            existing.mcp.avvarre = opencodeEntry;
+            writeFileSync(configPath, JSON.stringify(existing, null, 2), 'utf-8');
+            created.push(`${configPath} (added avvarre)`);
+        } catch {
+            skipped.push(`${configPath} (could not parse, left untouched)`);
+        }
+    } else {
+        const dir = dirname(configPath);
+        if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+        writeFileSync(configPath, JSON.stringify({
+            $schema: "https://opencode.ai/config.json",
+            mcp: { avvarre: opencodeEntry },
+        }, null, 2), 'utf-8');
+        created.push(configPath);
+    }
+}
+
+/**
+ * Global OpenCode install: copies the plugin file directly to ~/.config/opencode/plugins/avvarre.ts
+ */
 function installOpenCodeGlobal(created: string[], skipped: string[]): void {
     const home = homedir();
-    const destPlugin = join(home, '.config', 'opencode', 'plugins', 'avvarre');
-    const srcPlugin = join(PACKAGE_ROOT, 'opencode-plugin');
+    const pluginsDir = join(home, '.config', 'opencode', 'plugins');
+    const destFile = join(pluginsDir, 'avvarre.ts');
+    const srcFile = join(PACKAGE_ROOT, 'opencode-plugin', 'plugins', 'avvarre', 'index.ts');
 
-    if (existsSync(srcPlugin)) {
-        if (existsSync(destPlugin)) {
-            skipped.push('~/.config/opencode/plugins/avvarre/ (already exists)');
+    if (existsSync(srcFile)) {
+        if (existsSync(destFile)) {
+            skipped.push('~/.config/opencode/plugins/avvarre.ts (already exists)');
         } else {
             try {
-                mkdirSync(dirname(destPlugin), { recursive: true });
-                cpSync(srcPlugin, destPlugin, { recursive: true });
-                created.push('~/.config/opencode/plugins/avvarre/ (OpenCode global plugin)');
+                mkdirSync(pluginsDir, { recursive: true });
+                cpSync(srcFile, destFile);
+                created.push('~/.config/opencode/plugins/avvarre.ts (OpenCode global plugin)');
             } catch {
-                skipped.push('~/.config/opencode/plugins/avvarre/ (global copy failed)');
+                skipped.push('~/.config/opencode/plugins/avvarre.ts (global copy failed)');
+            }
+        }
+    }
+}
+
+/**
+ * Local OpenCode install: copies the plugin file directly to .opencode/plugins/avvarre.ts
+ */
+function installOpenCodeLocal(workspaceRoot: string, created: string[], skipped: string[]): void {
+    const pluginsDir = join(workspaceRoot, '.opencode', 'plugins');
+    const destFile = join(pluginsDir, 'avvarre.ts');
+    const srcFile = join(PACKAGE_ROOT, 'opencode-plugin', 'plugins', 'avvarre', 'index.ts');
+
+    if (existsSync(srcFile)) {
+        if (existsSync(destFile)) {
+            skipped.push('.opencode/plugins/avvarre.ts (already exists)');
+        } else {
+            try {
+                mkdirSync(pluginsDir, { recursive: true });
+                cpSync(srcFile, destFile);
+                created.push('.opencode/plugins/avvarre.ts (OpenCode local plugin)');
+            } catch {
+                skipped.push('.opencode/plugins/avvarre.ts (local copy failed)');
             }
         }
     }

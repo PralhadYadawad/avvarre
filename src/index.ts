@@ -58,7 +58,7 @@ function detectLanguage(filePath: string): Language | null {
 }
 
 if (subcommand === 'install') {
-    let mode: 'global' | 'local' | 'both' = 'both';
+    let mode: 'global' | 'local' | 'both' = 'global';
     if (flags.includes('--global')) {
         mode = 'global';
     } else if (flags.includes('--local')) {

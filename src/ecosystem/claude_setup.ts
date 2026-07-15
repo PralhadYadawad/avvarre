@@ -21,7 +21,7 @@
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
-import { scaffoldavvarre } from './scaffold.js';
+
 
 export interface ClaudeSetupResult {
     created: string[];
@@ -110,19 +110,6 @@ export async function setupClaudeCode(workspaceRoot: string): Promise<ClaudeSetu
         mkdirSync(commandsDir, { recursive: true });
     }
 
-    // ── 1. .avvarre/ — project memory ─────────────────────────────
-    const avvarreDir = join(workspaceRoot, '.avvarre');
-    if (!existsSync(avvarreDir)) {
-        const scaffoldResult = await scaffoldavvarre(workspaceRoot, {});
-        for (const f of scaffoldResult.created) {
-            created.push(`.avvarre/${f}`);
-        }
-        for (const f of scaffoldResult.skipped) {
-            skipped.push(`.avvarre/${f}`);
-        }
-    } else {
-        skipped.push('.avvarre/ (already exists)');
-    }
 
     // ── 2. CLAUDE.md — project instructions ─────────────────────────
     writeIfMissing(
