@@ -159,17 +159,19 @@ export const AvvarrePlugin: Plugin = async ({ project, client, $, directory, wor
     },
 
     // Lifecycle Hook: Intercept edits to run Downstream Graph Warning
+    // NOTE: In tool.execute.after, args are on `input.args`; result text is on `output.output`.
     "tool.execute.after": async (input, output) => {
       const isEdit = ["write", "edit", "apply_patch"].includes(input.tool);
       if (!isEdit) return;
 
-      const affected = extractFilesFromArgs(output.args);
+      // args are always on input in the after hook (output only has title/output/metadata)
+      const affected = extractFilesFromArgs(input.args);
       if (affected.length === 0) return;
 
       const warning = queryDependencyGraph(directory, affected);
-      if (warning && output.result) {
-        // Inject the warning directly into the tool output returned to the LLM
-        output.result = `${output.result.trim()}\n\n${warning}`;
+      if (warning && output.output) {
+        // Append the downstream warning to the tool output text seen by the LLM
+        output.output = `${output.output.trim()}\n\n${warning}`;
       }
     },
 
@@ -286,50 +288,12 @@ export const AvvarrePlugin: Plugin = async ({ project, client, $, directory, wor
         }
       }
     },
-    // TUI Slash Command execution interceptors
-    "tui.command.execute": async (input, output) => {
-      const command = input.command.trim();
- 
-      if (command.startsWith("/avvarre:init") || command.startsWith("/avvarre-init")) {
-        output.intercepted = true;
-        console.log("[Avvarre] Scaffolding .avvarre/ memory structure...");
-        const res = await client.mcp.callTool({
-          name: "avvarre_scaffold_avvarre",
-          arguments: {}
-        });
-        console.log(res);
-      } else if (command.startsWith("/avvarre:pr") || command.startsWith("/avvarre-pr")) {
-        output.intercepted = true;
-        console.log("[Avvarre] Running PR quality gate on changed files...");
-        const res = await client.mcp.callTool({
-          name: "avvarre_avvarre_pr",
-          arguments: {}
-        });
-        console.log(res);
-      } else if (command.startsWith("/avvarre:workspace") || command.startsWith("/avvarre-workspace")) {
-        output.intercepted = true;
-        console.log("[Avvarre] Auditing the entire workspace...");
-        const res = await client.mcp.callTool({
-          name: "avvarre_avvarre_workspace",
-          arguments: {}
-        });
-        console.log(res);
-      } else if (command.startsWith("/avvarre:garden") || command.startsWith("/avvarre-garden")) {
-        output.intercepted = true;
-        console.log("[Avvarre] Auditing persistent memory folders (.avvarre/)...");
-        const res = await client.mcp.callTool({
-          name: "avvarre_avvarre_garden",
-          arguments: { workspaceRoot: directory }
-        });
-        console.log(res);
-      } else if (command.startsWith("/avvarre:autopilot") || command.startsWith("/avvarre-autopilot")) {
-        output.intercepted = true;
-        console.log("[Avvarre] Initializing refactoring autopilot loop...");
-      } else if (command === "/avvarre") {
-        output.intercepted = true;
-        console.log("[Avvarre] Supported Commands:\n  - /avvarre-init (or :init) - Scaffold memory\n  - /avvarre-workspace (or :workspace) - Scan workspace\n  - /avvarre-pr (or :pr) - Review git changes\n  - /avvarre-garden (or :garden) - Audit memory folder\n  - /avvarre-autopilot (or :autopilot) - Run autopilot fixes");
-      }
-    }
+    // NOTE: Slash commands (/avvarre-init, /avvarre-pr, etc.) are NOT registered here.
+    // The tui.command.execute event is a passive observer and cannot define new commands.
+    // Avvarre's custom commands are installed as markdown files in:
+    //   Global:  ~/.config/opencode/commands/avvarre-*.md
+    //   Local:   .opencode/commands/avvarre-*.md
+    // The installer handles copying these files from opencode-plugin/commands/.
   };
 };
 

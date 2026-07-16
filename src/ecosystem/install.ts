@@ -738,9 +738,12 @@ function writeOpenCodeConfig(
 
 /**
  * Global OpenCode install: copies the plugin file directly to ~/.config/opencode/plugins/avvarre.ts
+ * and copies all avvarre command markdown files to ~/.config/opencode/commands/.
  */
 function installOpenCodeGlobal(created: string[], skipped: string[]): void {
     const home = homedir();
+
+    // --- Plugin file ---
     const pluginsDir = join(home, '.config', 'opencode', 'plugins');
     const destFile = join(pluginsDir, 'avvarre.ts');
     const srcFile = join(PACKAGE_ROOT, 'opencode-plugin', 'plugins', 'avvarre', 'index.ts');
@@ -758,12 +761,36 @@ function installOpenCodeGlobal(created: string[], skipped: string[]): void {
             }
         }
     }
+
+    // --- Custom command markdown files ---
+    // Per OpenCode docs, slash commands are defined as markdown files in the commands/ directory.
+    const srcCmdsDir = join(PACKAGE_ROOT, 'opencode-plugin', 'commands');
+    const destCmdsDir = join(home, '.config', 'opencode', 'commands');
+    if (existsSync(srcCmdsDir)) {
+        try {
+            mkdirSync(destCmdsDir, { recursive: true });
+            const cmdFiles = readdirSync(srcCmdsDir).filter(f => f.endsWith('.md'));
+            for (const file of cmdFiles) {
+                const destCmd = join(destCmdsDir, file);
+                if (existsSync(destCmd)) {
+                    skipped.push(`~/.config/opencode/commands/${file} (already exists)`);
+                } else {
+                    cpSync(join(srcCmdsDir, file), destCmd);
+                    created.push(`~/.config/opencode/commands/${file} (OpenCode command)`);
+                }
+            }
+        } catch {
+            skipped.push('~/.config/opencode/commands/ (failed to copy command files)');
+        }
+    }
 }
 
 /**
  * Local OpenCode install: copies the plugin file directly to .opencode/plugins/avvarre.ts
+ * and copies all avvarre command markdown files to .opencode/commands/.
  */
 function installOpenCodeLocal(workspaceRoot: string, created: string[], skipped: string[]): void {
+    // --- Plugin file ---
     const pluginsDir = join(workspaceRoot, '.opencode', 'plugins');
     const destFile = join(pluginsDir, 'avvarre.ts');
     const srcFile = join(PACKAGE_ROOT, 'opencode-plugin', 'plugins', 'avvarre', 'index.ts');
@@ -779,6 +806,28 @@ function installOpenCodeLocal(workspaceRoot: string, created: string[], skipped:
             } catch {
                 skipped.push('.opencode/plugins/avvarre.ts (local copy failed)');
             }
+        }
+    }
+
+    // --- Custom command markdown files ---
+    // Per OpenCode docs, slash commands are defined as markdown files in the commands/ directory.
+    const srcCmdsDir = join(PACKAGE_ROOT, 'opencode-plugin', 'commands');
+    const destCmdsDir = join(workspaceRoot, '.opencode', 'commands');
+    if (existsSync(srcCmdsDir)) {
+        try {
+            mkdirSync(destCmdsDir, { recursive: true });
+            const cmdFiles = readdirSync(srcCmdsDir).filter(f => f.endsWith('.md'));
+            for (const file of cmdFiles) {
+                const destCmd = join(destCmdsDir, file);
+                if (existsSync(destCmd)) {
+                    skipped.push(`.opencode/commands/${file} (already exists)`);
+                } else {
+                    cpSync(join(srcCmdsDir, file), destCmd);
+                    created.push(`.opencode/commands/${file} (OpenCode command)`);
+                }
+            }
+        } catch {
+            skipped.push('.opencode/commands/ (failed to copy command files)');
         }
     }
 }
