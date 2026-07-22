@@ -3,36 +3,36 @@ import { GraphNode } from './index.js';
 
 // Keywords to detect security-sensitive components
 const SECURITY_KEYWORDS = [
-    'auth', 'login', 'sign', 'crypt', 'key', 'pass', 'token', 
-    'secr', 'admin', 'cred', 'jwt', 'pay', 'wallet', 'session',
-    'db', 'sql', 'db_connection', 'hash', 'encrypt', 'decrypt'
+    'auth', 'login', 'credential', 'password', 'passphrase', 'token', 
+    'secret', 'admin', 'jwt', 'wallet', 'session', 'encrypt', 'decrypt',
+    'privatekey', 'private_key', 'apikey', 'api_key', 'oauth', 'sshkey'
 ];
 
 /**
  * Computes a risk score between 0.0 and 1.0 for a given node.
  */
 export function computeRiskScore(db: DatabaseSync, node: GraphNode): number {
-    let score = 0.0;
+    let baseScore = 0.0;
 
     // 1. Test Coverage factor (0.30 if untested, 0.05 if tested)
     const testedStmt = db.prepare("SELECT COUNT(*) as cnt FROM edges WHERE target_qualified = ? AND kind = 'TESTED_BY'");
     const testCountRow = testedStmt.get(node.qualified_name) as { cnt: number } | undefined;
     const hasTest = (testCountRow?.cnt || 0) > 0;
-    score += hasTest ? 0.05 : 0.30;
+    baseScore += hasTest ? 0.05 : 0.30;
 
-    // 2. Security Sensitivity factor (0.20 if matches keywords)
-    const nameLower = node.name.toLowerCase();
-    const qnLower = node.qualified_name.toLowerCase();
-    const isSecuritySensitive = SECURITY_KEYWORDS.some(kw => nameLower.includes(kw) || qnLower.includes(kw));
-    if (isSecuritySensitive) {
-        score += 0.20;
-    }
-
-    // 3. Caller count / Fan-in factor (cap at 0.10)
+    // 2. Caller count / Fan-in factor (cap at 0.10)
     const callersStmt = db.prepare("SELECT COUNT(*) as cnt FROM edges WHERE target_qualified = ? AND kind = 'CALLS'");
     const callersRow = callersStmt.get(node.qualified_name) as { cnt: number } | undefined;
     const callerCount = callersRow?.cnt || 0;
-    score += Math.min(callerCount / 20.0, 0.10);
+    baseScore += Math.min(callerCount / 20.0, 0.10);
+
+    // 3. Security Multiplier (2.5x if matches keywords, 1.0x otherwise)
+    const nameLower = node.name.toLowerCase();
+    const qnLower = node.qualified_name.toLowerCase();
+    const isSecuritySensitive = SECURITY_KEYWORDS.some(kw => nameLower.includes(kw) || qnLower.includes(kw));
+    const multiplier = isSecuritySensitive ? 2.5 : 1.0;
+
+    const score = baseScore * multiplier;
 
     // Round to 3 decimal places and clamp between 0.0 and 1.0
     return Math.round(Math.min(Math.max(score, 0.0), 1.0) * 1000) / 1000;

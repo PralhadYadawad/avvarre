@@ -37,6 +37,8 @@
     "antigravity-plugin/",
     "awesome-copilot/",
     "opencode-plugin/",
+    "plugins/avvarre/",
+    ".agents/plugins/marketplace.json",
     "README.md",
     "LICENSE",
     "CLAUDE.md",

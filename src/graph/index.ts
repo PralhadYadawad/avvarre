@@ -2,6 +2,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { parseFile, ParsedNode, ParsedEdge } from './parser.js';
+import { setMetadata } from '../db/connection.js';
 
 export interface GraphNode {
     id: number;
@@ -136,6 +137,14 @@ export async function indexFile(db: DatabaseSync, filePath: string): Promise<boo
         }
 
         db.exec('COMMIT;');
+
+        // Resolve simple calls and update TESTED_BY links
+        resolveQualifiedCallees(db);
+        updateTestedByEdges(db);
+
+        // Update indexing metadata
+        setMetadata(db, 'last_index_time', new Date().toISOString());
+        setMetadata(db, 'last_indexed_file', filePath);
     } catch (error) {
         db.exec('ROLLBACK;');
         console.error(`[Avvarre Indexer] Transaction failed for ${filePath}:`, error);
@@ -308,4 +317,172 @@ export function getImpactRadius(
         truncated,
         total_impacted: totalImpacted
     };
+}
+
+/**
+ * Resolves unresolved simple/suffix callee names in CALLS edges to their
+ * fully qualified node representations.
+ */
+export function resolveQualifiedCallees(db: DatabaseSync): void {
+    const getUnresolvedEdges = db.prepare(`
+        SELECT id, source_qualified, target_qualified, file_path 
+        FROM edges 
+        WHERE kind = 'CALLS' AND target_qualified NOT LIKE '%::%'
+    `);
+    
+    const findCandidateNodes = db.prepare(`
+        SELECT qualified_name, file_path 
+        FROM nodes 
+        WHERE name = ? AND kind IN ('Function', 'Class', 'Test')
+    `);
+
+    const updateEdgeTarget = db.prepare(`
+        UPDATE edges 
+        SET target_qualified = ? 
+        WHERE id = ?
+    `);
+
+    const unresolved = getUnresolvedEdges.all() as Array<{
+        id: number;
+        source_qualified: string;
+        target_qualified: string;
+        file_path: string;
+    }>;
+
+    if (unresolved.length === 0) return;
+
+    db.exec('BEGIN IMMEDIATE;');
+    try {
+        for (const edge of unresolved) {
+            const candidates = findCandidateNodes.all(edge.target_qualified) as Array<{
+                qualified_name: string;
+                file_path: string;
+            }>;
+
+            if (candidates.length === 0) continue;
+
+            // Find best candidate:
+            // 1. Same file
+            let best = candidates.find(c => c.file_path === edge.file_path);
+            
+            // 2. Imported file (check if there's an IMPORTS_FROM edge from edge.file_path to candidate's file)
+            if (!best) {
+                const importsStmt = db.prepare(`
+                    SELECT target_qualified FROM edges 
+                    WHERE source_qualified = ? AND kind = 'IMPORTS_FROM'
+                `);
+                const imports = importsStmt.all(edge.file_path) as Array<{ target_qualified: string }>;
+                
+                best = candidates.find(c => {
+                    return imports.some(imp => c.file_path.includes(imp.target_qualified));
+                });
+            }
+
+            // 3. Fallback to first candidate
+            if (!best) {
+                best = candidates[0];
+            }
+
+            updateEdgeTarget.run(best.qualified_name, edge.id);
+        }
+        db.exec('COMMIT;');
+    } catch (error) {
+        db.exec('ROLLBACK;');
+        console.error('[Avvarre Indexer] Failed to resolve qualified callees:', error);
+    }
+}
+
+/**
+ * Creates TESTED_BY edges by connecting Test nodes to the target nodes they cover,
+ * using both resolved call dependencies and naming heuristics.
+ */
+export function updateTestedByEdges(db: DatabaseSync): void {
+    db.prepare("DELETE FROM edges WHERE kind = 'TESTED_BY'").run();
+
+    const getTestNodes = db.prepare("SELECT qualified_name, name, file_path, line_start FROM nodes WHERE is_test = 1");
+    const testNodes = getTestNodes.all() as Array<{ qualified_name: string; name: string; file_path: string; line_start: number }>;
+
+    if (testNodes.length === 0) return;
+
+    const insertEdge = db.prepare(`
+        INSERT OR IGNORE INTO edges 
+        (kind, source_qualified, target_qualified, file_path, line, extra, updated_at)
+        VALUES ('TESTED_BY', ?, ?, ?, ?, ?, ?)
+    `);
+
+    db.exec('BEGIN IMMEDIATE;');
+    try {
+        for (const testNode of testNodes) {
+            // Find all functions/methods called by this test node
+            const getCalls = db.prepare(`
+                SELECT target_qualified, line FROM edges 
+                WHERE source_qualified = ? AND kind = 'CALLS'
+            `);
+            const calls = getCalls.all(testNode.qualified_name) as Array<{ target_qualified: string; line: number }>;
+
+            for (const call of calls) {
+                const checkNode = db.prepare(`
+                    SELECT qualified_name FROM nodes 
+                    WHERE qualified_name = ? AND is_test = 0 AND kind IN ('Function', 'Class')
+                `);
+                const match = checkNode.get(call.target_qualified) as { qualified_name: string } | undefined;
+
+                if (match) {
+                    insertEdge.run(
+                        testNode.qualified_name,
+                        match.qualified_name,
+                        testNode.file_path,
+                        call.line,
+                        JSON.stringify({}),
+                        Date.now() / 1000
+                    );
+                }
+            }
+
+            // Heuristic fallback matching:
+            const cleanNames = getHeuristicTargetNames(testNode.name);
+            for (const targetName of cleanNames) {
+                const findNodes = db.prepare(`
+                    SELECT qualified_name FROM nodes 
+                    WHERE name = ? AND is_test = 0 AND kind IN ('Function', 'Class')
+                `);
+                const matches = findNodes.all(targetName) as Array<{ qualified_name: string }>;
+                for (const match of matches) {
+                    insertEdge.run(
+                        testNode.qualified_name,
+                        match.qualified_name,
+                        testNode.file_path,
+                        testNode.line_start || 1,
+                        JSON.stringify({}),
+                        Date.now() / 1000
+                    );
+                }
+            }
+        }
+        db.exec('COMMIT;');
+    } catch (error) {
+        db.exec('ROLLBACK;');
+        console.error('[Avvarre Indexer] Failed to update TESTED_BY edges:', error);
+    }
+}
+
+function getHeuristicTargetNames(testName: string): string[] {
+    const targets: string[] = [];
+    let clean = testName.replace(/^(test|Test|benchmark|Benchmark|spec|Spec)_?/, '');
+    if (clean && clean !== testName) {
+        targets.push(clean);
+        const decap = clean.charAt(0).toLowerCase() + clean.slice(1);
+        if (decap !== clean) {
+            targets.push(decap);
+        }
+    }
+    let cleanSuffix = testName.replace(/_?(test|Test|spec|Spec|benchmark|Benchmark)$/, '');
+    if (cleanSuffix && cleanSuffix !== testName) {
+        targets.push(cleanSuffix);
+        const decap = cleanSuffix.charAt(0).toLowerCase() + cleanSuffix.slice(1);
+        if (decap !== cleanSuffix) {
+            targets.push(decap);
+        }
+    }
+    return Array.from(new Set(targets));
 }

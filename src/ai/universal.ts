@@ -14,7 +14,7 @@ import { analyze } from '../analyzer/engine.js';
 import type { Language, Severity } from '../types.js';
 import { calculateScore, calculateGrade } from '../analyzer/scorer.js';
 import type { ActionableFinding, avvarreFileResult } from './types.js';
-import { chunkCode, adjustLineNumbers, deduplicateFindings, MAX_LINES_PER_CHUNK } from './chunker.js';
+import { chunkCodeAST, adjustLineNumbers, deduplicateFindings, MAX_LINES_PER_CHUNK } from './chunker.js';
 
 export interface UniversalConfig {
     /** The base URL of the OpenAI-compatible API (e.g., https://api.groq.com/openai/v1) */
@@ -77,7 +77,7 @@ export class UniversalAiClient implements IAiClient {
         };
 
         // ── Step 2: AI Deep Review (with chunking if needed) ──────────
-        const chunks = chunkCode(code);
+        const chunks = await chunkCodeAST(code, filename);
         const isChunked = chunks.length > 1;
 
         if (isChunked) {

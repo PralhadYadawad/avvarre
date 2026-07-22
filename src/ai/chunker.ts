@@ -13,6 +13,7 @@
  */
 
 import type { ActionableFinding } from './types.js';
+import { parseFile } from '../graph/parser.js';
 
 /**
  * Configurable limits.
@@ -149,4 +150,109 @@ export function deduplicateFindings(findings: ActionableFinding[]): ActionableFi
  */
 export function needsChunking(code: string): boolean {
     return code.split('\n').length > MAX_LINES_PER_CHUNK;
+}
+
+/**
+ * Splits large source files into smaller chunks at AST boundaries if possible.
+ * Falls back to line-based chunking if tree-sitter parsing is not available or fails.
+ */
+export async function chunkCodeAST(code: string, filePath?: string): Promise<CodeChunk[]> {
+    const lines = code.split('\n');
+    const totalLines = lines.length;
+
+    // No chunking needed for small files
+    if (totalLines <= MAX_LINES_PER_CHUNK) {
+        return [{
+            code,
+            startLine: 1,
+            endLine: totalLines,
+            chunkIndex: 1,
+            totalChunks: 1,
+        }];
+    }
+
+    let forbiddenRanges: { start: number; end: number }[] = [];
+
+    if (filePath) {
+        try {
+            const parseResult = await parseFile(filePath, code);
+            // We only want Class, Function, Test, and Type nodes
+            for (const node of parseResult.nodes) {
+                if (node.kind !== 'File') {
+                    forbiddenRanges.push({ start: node.lineStart, end: node.lineEnd });
+                }
+            }
+        } catch (e) {
+            console.warn('[Chunker] AST parse failed for chunking, falling back to line-based:', e);
+        }
+    }
+
+    // Helper to check if a 1-indexed line number is inside any forbidden range
+    const isForbidden = (line: number): boolean => {
+        for (const range of forbiddenRanges) {
+            if (line >= range.start && line <= range.end) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    const chunks: CodeChunk[] = [];
+    let currentStart = 0; // 0-indexed line in the lines array
+
+    while (currentStart < totalLines) {
+        let currentEnd = Math.min(currentStart + MAX_LINES_PER_CHUNK, totalLines);
+
+        if (currentEnd < totalLines) {
+            // Search backward up to 50 lines to find a non-forbidden split line
+            let splitLine = -1;
+            const searchStart = currentEnd;
+            const searchEnd = Math.max(currentStart + 1, currentEnd - 50);
+            for (let l = searchStart; l >= searchEnd; l--) {
+                if (!isForbidden(l)) {
+                    splitLine = l;
+                    break;
+                }
+            }
+
+            if (splitLine !== -1) {
+                currentEnd = splitLine;
+            } else {
+                // If no split line was found, search forward up to 50 lines
+                const forwardSearchEnd = Math.min(totalLines, currentEnd + 50);
+                for (let l = currentEnd + 1; l <= forwardSearchEnd; l++) {
+                    if (!isForbidden(l)) {
+                        splitLine = l;
+                        break;
+                    }
+                }
+                if (splitLine !== -1) {
+                    currentEnd = splitLine;
+                }
+            }
+        }
+
+        const chunkLines = lines.slice(currentStart, currentEnd);
+
+        chunks.push({
+            code: chunkLines.join('\n'),
+            startLine: currentStart + 1,
+            endLine: currentEnd,
+            chunkIndex: chunks.length + 1,
+            totalChunks: 0,
+        });
+
+        if (currentEnd >= totalLines) {
+            break;
+        }
+
+        // We overlap by OVERLAP_LINES (20) to maintain context
+        currentStart = Math.max(currentStart + 1, currentEnd - OVERLAP_LINES);
+    }
+
+    for (const chunk of chunks) {
+        chunk.totalChunks = chunks.length;
+    }
+
+    return chunks;
 }

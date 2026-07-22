@@ -36,6 +36,12 @@ export function getDatabase(workspaceRoot: string): DatabaseSync {
         const schemaPath = join(__dirname, 'schema.sql');
         const schema = readFileSync(schemaPath, 'utf8');
         db.exec(schema);
+
+        // Write initial schema metadata
+        setMetadata(db, 'schema_version', '1');
+        if (!getMetadata(db, 'initialized_at')) {
+            setMetadata(db, 'initialized_at', new Date().toISOString());
+        }
     } catch (error) {
         console.error('[Avvarre DB] Failed to apply schema migrations:', error);
     }
@@ -45,10 +51,38 @@ export function getDatabase(workspaceRoot: string): DatabaseSync {
 }
 
 /**
+ * Set a key-value pair in the metadata table.
+ */
+export function setMetadata(db: DatabaseSync, key: string, value: string): void {
+    const stmt = db.prepare('INSERT OR REPLACE INTO metadata (key, value) VALUES (?, ?)');
+    stmt.run(key, value);
+}
+
+/**
+ * Get a value by key from the metadata table.
+ */
+export function getMetadata(db: DatabaseSync, key: string): string | null {
+    try {
+        const stmt = db.prepare('SELECT value FROM metadata WHERE key = ?');
+        const row = stmt.get(key) as { value: string } | undefined;
+        return row ? row.value : null;
+    } catch {
+        return null;
+    }
+}
+
+/**
  * Close the current database connection if open.
+ * Releases the underlying SQLite handle (and its WAL files) before
+ * dropping the singleton reference.
  */
 export function closeDatabase(): void {
     if (dbInstance) {
+        try {
+            dbInstance.close();
+        } catch (error) {
+            console.error('[Avvarre DB] Failed to close database handle:', error);
+        }
         dbInstance = null;
     }
 }

@@ -343,8 +343,8 @@ Your JSON must match this exact schema:
 `;
   }
 
-  // Default to JavaScript
-  return `You are avvarre, an expert JavaScript code reviewer embedded as an MCP server for modern IDE AI Agents (like Cursor, Copilot). You strictly follow the Google JavaScript Style Guide (https://google.github.io/styleguide/jsguide.html).
+  if (language === 'javascript') {
+    return `You are avvarre, an expert JavaScript code reviewer embedded as an MCP server for modern IDE AI Agents (like Cursor, Copilot). You strictly follow the Google JavaScript Style Guide (https://google.github.io/styleguide/jsguide.html).
 
 Your job is two-fold:
 1. Provide precise, copy-paste-ready, actionable fixes for Style Violations already found by our Regex Pattern Matcher.
@@ -406,6 +406,7 @@ Your JSON must match this exact schema:
 3. Your own deep findings must have isRegexConfirmed=false.
 4. DO NOT hallucinate syntax errors in your actionableFix.
 `;
+  }
 
   if (language === 'kotlin') {
     return `You are avvarre, an expert Kotlin code reviewer embedded as an MCP server for modern IDE AI Agents. You strictly follow the Google Kotlin Style Guide (https://developer.android.com/kotlin/style-guide).
@@ -601,7 +602,10 @@ Your job is to provide precise, actionable fixes for Style Violations and perfor
 ## Output Format: JSON only. { findings: [...], summary: "..." }`;
   }
 
-  return ''; // Should not happen with current Language type
+  // Fallback for languages without a dedicated system prompt (r, html, css,
+  // markdown, json, xml, vimscript, lisp, angular): use the JavaScript
+  // reviewer, which carries the full generic review + JSON-output contract.
+  return getSystemInstruction('javascript');
 }
 
 /**

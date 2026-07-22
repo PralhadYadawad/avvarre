@@ -49,6 +49,7 @@ export const IDE_FLAGS: Record<string, string> = {
     '--zed':      'Zed',
     '--continue': 'Continue',
     '--opencode': 'OpenCode',
+    '--codex':    'Codex',
 };
 
 // ── MCP server config block (shared across IDEs) ─────────────────────
@@ -151,6 +152,16 @@ export function detectInstalledIDEs(): IdeDetection[] {
                 : 'opencode in PATH',
     });
 
+    // Codex — check both the home directory and PATH (codex CLI)
+    const codexDir = join(home, '.codex');
+    const codexDetected = existsSync(codexDir) || commandExists('codex');
+    results.push({
+        name: 'Codex',
+        detected: codexDetected,
+        configPath: join(codexDir, 'config.json'),
+        reason: existsSync(codexDir) ? '~/.codex/ found' : codexDetected ? 'codex in PATH' : 'not found',
+    });
+
     return results;
 }
 
@@ -247,6 +258,13 @@ export async function runInstall(
                 const localConfigPath = join(workspaceRoot, 'opencode.json');
                 writeOpenCodeConfig(localConfigPath, created, skipped);
                 installOpenCodeLocal(workspaceRoot, created, skipped);
+            }
+        } else if (ide.name === 'Codex') {
+            if (mode === 'global' || mode === 'both') {
+                installCodexGlobal(created, skipped);
+            }
+            if (mode === 'local' || mode === 'both') {
+                installCodexLocal(workspaceRoot, created, skipped);
             }
         }
     }
@@ -588,6 +606,12 @@ function installClaudeHooks(created: string[], skipped: string[]): void {
             { hooks: [{ type: 'command', command: `node "${join(hooksDir, 'hook-context-loader.cjs')}"` }] },
             { hooks: [{ type: 'command', command: `node "${join(hooksDir, 'hook-skill-suggest.cjs')}"` }] },
         ],
+        PreToolUse: [
+            {
+                matcher: "Write|Edit|editFiles|createFile|write_to_file|replace_file_content|multi_replace_file_content",
+                hooks: [{ type: 'command', command: `node "${join(hooksDir, 'hook-impact-warn.cjs')}"` }]
+            }
+        ],
         Stop: [
             { hooks: [{ type: 'command', command: `node "${join(hooksDir, 'hook-session-end.cjs')}"` }] },
         ],
@@ -605,7 +629,7 @@ function installClaudeHooks(created: string[], skipped: string[]): void {
 
         existing.hooks = { ...existing.hooks, ...hookEntries };
         writeFileSync(settingsPath, JSON.stringify(existing, null, 2), 'utf-8');
-        created.push('~/.claude/settings.json (registered 4 hooks)');
+        created.push('~/.claude/settings.json (registered 5 hooks)');
     } catch {
         skipped.push('~/.claude/settings.json (could not register hooks)');
     }
@@ -829,5 +853,56 @@ function installOpenCodeLocal(workspaceRoot: string, created: string[], skipped:
         } catch {
             skipped.push('.opencode/commands/ (failed to copy command files)');
         }
+    }
+}
+
+/**
+ * Copies the bundled Codex plugin folder to global ~/.codex/plugins/avvarre/
+ */
+function installCodexGlobal(created: string[], skipped: string[]): void {
+    const home = homedir();
+    const destDir = join(home, '.codex', 'plugins', 'avvarre');
+    const srcDir = join(PACKAGE_ROOT, 'plugins', 'avvarre');
+    
+    if (!existsSync(srcDir)) {
+        skipped.push('Codex (global): source plugins/avvarre not found');
+        return;
+    }
+    
+    try {
+        mkdirSync(dirname(destDir), { recursive: true });
+        if (existsSync(destDir)) {
+            skipped.push('~/.codex/plugins/avvarre/ (already exists)');
+        } else {
+            cpSync(srcDir, destDir, { recursive: true });
+            created.push('~/.codex/plugins/avvarre/ (Codex global plugin)');
+        }
+    } catch (e: any) {
+        skipped.push(`Codex (global) copy failed: ${e.message}`);
+    }
+}
+
+/**
+ * Copies the bundled Codex plugin folder to local [workspaceRoot]/.codex/plugins/avvarre/
+ */
+function installCodexLocal(workspaceRoot: string, created: string[], skipped: string[]): void {
+    const destDir = join(workspaceRoot, '.codex', 'plugins', 'avvarre');
+    const srcDir = join(PACKAGE_ROOT, 'plugins', 'avvarre');
+    
+    if (!existsSync(srcDir)) {
+        skipped.push('Codex (local): source plugins/avvarre not found');
+        return;
+    }
+    
+    try {
+        mkdirSync(dirname(destDir), { recursive: true });
+        if (existsSync(destDir)) {
+            skipped.push('.codex/plugins/avvarre/ (already exists)');
+        } else {
+            cpSync(srcDir, destDir, { recursive: true });
+            created.push('.codex/plugins/avvarre/ (Codex local plugin)');
+        }
+    } catch (e: any) {
+        skipped.push(`Codex (local) copy failed: ${e.message}`);
     }
 }

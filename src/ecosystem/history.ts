@@ -97,8 +97,10 @@ export function getHistoryTrends(workspaceRoot: string, targetFile?: string): st
             // Project overview trend (latest scan per file)
             const latestScores = new Map<string, HistoryEntry>();
             for (const entry of history) {
-                // Relying on chronological append order, last seen is latest
-                latestScores.set(entry.file, entry);
+                const existing = latestScores.get(entry.file);
+                if (!existing || new Date(entry.date).getTime() > new Date(existing.date).getTime()) {
+                    latestScores.set(entry.file, entry);
+                }
             }
 
             if (latestScores.size === 0) return 'No file scores recorded yet.';
@@ -144,7 +146,10 @@ export function getProjectQualityMetrics(workspaceRoot: string): ProjectMetrics 
 
         const latestScores = new Map<string, HistoryEntry>();
         for (const entry of history) {
-            latestScores.set(entry.file, entry);
+            const existing = latestScores.get(entry.file);
+            if (!existing || new Date(entry.date).getTime() > new Date(existing.date).getTime()) {
+                latestScores.set(entry.file, entry);
+            }
         }
 
         if (latestScores.size === 0) return null;

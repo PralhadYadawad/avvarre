@@ -3,19 +3,20 @@
     "SessionStart": [
       {
         "type": "command",
-        "command": "${CLAUDE_PLUGIN_ROOT}/hook-bootstrap.cjs"
+        "command": "node \"${CLAUDE_PLUGIN_ROOT}/hook-bootstrap.cjs\""
       },
       {
         "type": "command",
-        "command": "${CLAUDE_PLUGIN_ROOT}/hook-context-loader.cjs"
+        "command": "node \"${CLAUDE_PLUGIN_ROOT}/hook-context-loader.cjs\""
       },
       {
         "type": "command",
-        "command": "${CLAUDE_PLUGIN_ROOT}/hook-skill-suggest.cjs"
+        "command": "node \"${CLAUDE_PLUGIN_ROOT}/hook-skill-suggest.cjs\""
       }
     ],
     "PreToolUse": [
       {
+        "matcher": "Write|Edit|editFiles|createFile|write_to_file|replace_file_content|multi_replace_file_content",
         "type": "command",
         "command": "node \"${CLAUDE_PLUGIN_ROOT}/hook-impact-warn.cjs\""
       }
@@ -23,7 +24,7 @@
     "Stop": [
       {
         "type": "command",
-        "command": "${CLAUDE_PLUGIN_ROOT}/hook-session-end.cjs"
+        "command": "node \"${CLAUDE_PLUGIN_ROOT}/hook-session-end.cjs\""
       }
     ]
   }

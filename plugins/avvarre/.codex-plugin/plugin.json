@@ -1,0 +1,37 @@
+{
+  "name": "avvarre",
+  "version": "0.5.12",
+  "description": "Persistent project memory and code-quality workflows for Codex.",
+  "author": {
+    "name": "Pralhad Yadawad",
+    "email": "pralhadyadawad@gmail.com",
+    "url": "https://github.com/PralhadYadawad"
+  },
+  "homepage": "https://github.com/PralhadYadawad/avvarre",
+  "repository": "https://github.com/PralhadYadawad/avvarre",
+  "license": "MIT",
+  "keywords": [
+    "code-quality",
+    "mcp",
+    "persistent-memory",
+    "code-review",
+    "agentic-coding"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Avvarre",
+    "shortDescription": "Code quality and persistent memory for Codex.",
+    "longDescription": "Analyze code against local style rules, use optional AI review, maintain project memory, and assess change impact.",
+    "developerName": "Pralhad Yadawad",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://github.com/PralhadYadawad/avvarre",
+    "defaultPrompt": [
+      "Review the current file with Avvarre.",
+      "Audit this workspace and prioritize the worst files.",
+      "Set up Avvarre project memory for this repository."
+    ],
+    "brandColor": "#2563EB"
+  }
+}

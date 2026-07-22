@@ -2,16 +2,28 @@
   "hooks": {
     "SessionStart": [
       {
-        "type": "command",
-        "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/hook-bootstrap.cjs\""
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/hook-bootstrap.cjs\""
+          }
+        ]
       },
       {
-        "type": "command",
-        "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/hook-context-loader.cjs\""
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/hook-context-loader.cjs\""
+          }
+        ]
       },
       {
-        "type": "command",
-        "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/hook-skill-suggest.cjs\""
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/hook-skill-suggest.cjs\""
+          }
+        ]
       }
     ],
     "PreToolUse": [
@@ -27,8 +39,12 @@
     ],
     "Stop": [
       {
-        "type": "command",
-        "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/hook-session-end.cjs\""
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/hook-session-end.cjs\""
+          }
+        ]
       }
     ]
   }

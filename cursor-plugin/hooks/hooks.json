@@ -2,23 +2,24 @@
   "hooks": {
     "sessionStart": [
       {
-        "command": "./scripts/hook-bootstrap.cjs"
+        "command": "node ./scripts/hook-bootstrap.cjs"
       },
       {
-        "command": "./scripts/hook-context-loader.cjs"
+        "command": "node ./scripts/hook-context-loader.cjs"
       },
       {
-        "command": "./scripts/hook-skill-suggest.cjs"
+        "command": "node ./scripts/hook-skill-suggest.cjs"
       }
     ],
     "preToolUse": [
       {
+        "matcher": "write|edit|createFile|writeFile|apply_patch|replace_file_content|multi_replace_file_content|write_to_file",
         "command": "node ./scripts/hook-impact-warn.cjs"
       }
     ],
     "sessionEnd": [
       {
-        "command": "./scripts/hook-session-end.cjs"
+        "command": "node ./scripts/hook-session-end.cjs"
       }
     ]
   }

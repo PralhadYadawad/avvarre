@@ -1,0 +1,20 @@
+{
+  "name": "avvarre",
+  "interface": {
+    "displayName": "Avvarre Plugins"
+  },
+  "plugins": [
+    {
+      "name": "avvarre",
+      "source": {
+        "source": "local",
+        "path": "./plugins/avvarre"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

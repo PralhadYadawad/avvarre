@@ -1,0 +1,42 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/hooks/session-start.cjs\"",
+            "timeout": 10,
+            "statusMessage": "Loading Avvarre project context"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "^apply_patch$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/hooks/impact-warn.cjs\"",
+            "timeout": 10,
+            "statusMessage": "Checking Avvarre change impact"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/hooks/session-end.cjs\"",
+            "timeout": 10,
+            "statusMessage": "Checking Avvarre project memory"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -63,13 +63,8 @@ process.stdin.on('end', () => {
     }
 
     // =====================================================
-    // PHASE 1 reminder check runs at the end after logging the session
+    // Phase 1: Log the session, then optionally block to ask for .avvarre/ updates
     // =====================================================
-
-    // =====================================================
-    // PHASE 2: Log the session (incremental, merge into one entry)
-    // =====================================================
-    const shortSession = sessionId.slice(0, 8);
 
     // --- Developer identity ---
     let dev = os.userInfo().username || 'unknown';
@@ -79,12 +74,6 @@ process.stdin.on('end', () => {
         if (gitUser) dev = gitUser;
     } catch (e) {}
 
-    // --- Session state (cursor tracking) ---
-    const stateFile = path.join(avvarreDir, '.session-state.json');
-    let state = {};
-    try { state = JSON.parse(fs.readFileSync(stateFile, 'utf-8')); } catch (e) {}
-
-    const prev = state[shortSession] || {};
     const prevLinesParsed = prev.linesParsed || 0;
     const startTime = prev.startTime || new Date().toTimeString().split(' ')[0].slice(0, 5);
     const endTime = new Date().toTimeString().split(' ')[0].slice(0, 5);

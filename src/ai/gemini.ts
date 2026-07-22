@@ -11,6 +11,8 @@ import { getSystemInstruction, buildUnifiedPrompt } from './prompts.js';
 import { analyze } from '../analyzer/engine.js';
 import type { Language, Severity } from '../types.js';
 import type { IAiClient } from './client.js';
+import { chunkCodeAST, adjustLineNumbers, deduplicateFindings, MAX_LINES_PER_CHUNK } from './chunker.js';
+import { calculateScore, calculateGrade } from '../analyzer/scorer.js';
 
 const DEFAULT_MODEL = 'gemini-2.0-flash';
 const FALLBACK_MODEL = 'gemini-2.0-flash';
@@ -84,55 +86,107 @@ export class GeminiClient implements IAiClient {
         // Step 1: Layer 1 Regex Analysis
         const patternResult = analyze(code, language);
 
-        // Step 2: Layer 2 AI Deep Review + Fix Suggestions
+        const regexFindings: ActionableFinding[] = patternResult.violations.map((v: any) => ({
+            ruleIdOrSection: v.ruleId,
+            category: "Regex Pattern Match",
+            severity: v.severity,
+            line: v.line,
+            issue: v.message,
+            actionableFix: v.suggestion,
+            codeSnippet: v.codeSnippet,
+            isRegexConfirmed: true,
+        }));
+
+        const meta: avvarreFileResult['meta'] = {
+            modelUsed: this.modelName,
+            tokensUsed: 0,
+            regexViolationsFound: regexFindings.length,
+            aiViolationsFound: 0,
+        };
+
+        // Step 2: Layer 2 AI Deep Review + Fix Suggestions (with AST chunking)
+        const chunks = await chunkCodeAST(code, filename);
+        const isChunked = chunks.length > 1;
+
+        if (isChunked) {
+            meta.chunked = true;
+            meta.totalChunks = chunks.length;
+        }
+
         try {
-            const prompt = buildUnifiedPrompt(code, language, filename, patternResult.violations);
+            let allAiFindings: ActionableFinding[] = [];
 
-            const model = this.getModelInstance(this.modelName, 0.2, 8192, language);
-            const result = await model.generateContent(prompt);
-            const response = result.response;
-            const text = response.text();
+            for (const chunk of chunks) {
+                // Build prompt for this chunk (includes relevant regex violations for context)
+                const chunkViolations = patternResult.violations.filter(
+                    (v: any) => v.line >= chunk.startLine && v.line <= chunk.endLine
+                );
+                const chunkPrompt = buildUnifiedPrompt(chunk.code, language, filename, chunkViolations);
 
-            const parsed = this.parseJsonResponse<{
-                findings: Array<{
-                    ruleIdOrSection: string;
-                    category: string;
-                    severity: string;
-                    line: number;
-                    issue: string;
-                    actionableFix: string;
-                    codeSnippet: string;
-                    isRegexConfirmed: boolean;
-                }>;
-                summary: string;
-            }>(text);
+                // Add chunk context to the prompt if chunked
+                let fullPrompt = chunkPrompt;
+                if (isChunked) {
+                    fullPrompt = `[NOTE: This is chunk ${chunk.chunkIndex} of ${chunk.totalChunks} (lines ${chunk.startLine}-${chunk.endLine} of the original file). Line numbers in your output should be relative to THIS chunk starting at line 1.]\n\n${chunkPrompt}`;
+                }
 
-            const findings: ActionableFinding[] = (parsed.findings || []).map(f => ({
-                ruleIdOrSection: f.ruleIdOrSection || 'Unknown',
-                category: f.category || 'General',
-                severity: this.normalizeSeverity(f.severity),
-                line: typeof f.line === 'number' ? f.line : 0,
-                issue: f.issue || 'No description provided',
-                actionableFix: f.actionableFix || '',
-                codeSnippet: f.codeSnippet || '',
-                isRegexConfirmed: !!f.isRegexConfirmed,
-            }));
+                const model = this.getModelInstance(this.modelName, 0.2, 8192, language);
+                const result = await model.generateContent(fullPrompt);
+                const response = result.response;
+                const text = response.text();
 
-            const usage = response.usageMetadata;
+                const parsed = this.parseJsonResponse<{
+                    findings: Array<{
+                        ruleIdOrSection: string;
+                        category: string;
+                        severity: string;
+                        line: number;
+                        issue: string;
+                        actionableFix: string;
+                        codeSnippet: string;
+                        isRegexConfirmed: boolean;
+                    }>;
+                    summary: string;
+                }>(text);
+
+                const chunkAiFindings: ActionableFinding[] = (parsed.findings || []).map(f => ({
+                    ruleIdOrSection: f.ruleIdOrSection || 'Unknown',
+                    category: f.category || 'General',
+                    severity: this.normalizeSeverity(f.severity),
+                    line: typeof f.line === 'number' ? f.line : 0,
+                    issue: f.issue || 'No description provided',
+                    actionableFix: f.actionableFix || '',
+                    codeSnippet: f.codeSnippet || '',
+                    isRegexConfirmed: !!f.isRegexConfirmed,
+                }));
+
+                const adjusted = adjustLineNumbers(chunkAiFindings, chunk);
+                allAiFindings.push(...adjusted);
+
+                const usage = response.usageMetadata;
+                meta.tokensUsed = (meta.tokensUsed || 0) + (usage?.totalTokenCount || 0);
+            }
+
+            const allFindings = deduplicateFindings([...regexFindings, ...allAiFindings]);
+            meta.aiViolationsFound = allAiFindings.filter(f => !f.isRegexConfirmed).length;
+
+            const totalLines = code.split('\n').length;
+            const score = calculateScore(allFindings as any[], totalLines);
+            const grade = calculateGrade(score);
+
+            let userNote: string | undefined;
+            if (isChunked) {
+                userNote = `This file (${totalLines} lines) was split into ${chunks.length} chunks of ~${MAX_LINES_PER_CHUNK} lines each for AI analysis. Regex analysis covered the entire file. All line numbers are accurate to the original file.`;
+            }
 
             return {
                 filename: filename || 'unknown',
-                score: patternResult.score, // Keeps the deterministic baseline score
-                grade: patternResult.grade,
+                score,
+                grade,
                 aiEnhanced: true,
-                findings,
-                summary: parsed.summary || 'AI deep analysis completed.',
-                meta: {
-                    modelUsed: this.modelName,
-                    tokensUsed: usage?.totalTokenCount || 0,
-                    regexViolationsFound: patternResult.violations.length,
-                    aiViolationsFound: findings.filter(f => !f.isRegexConfirmed).length,
-                }
+                findings: allFindings,
+                summary: `AI deep analysis completed. Found ${regexFindings.length} regex + ${meta.aiViolationsFound} AI violations.`,
+                userNote,
+                meta
             };
 
         } catch (error) {
@@ -144,28 +198,14 @@ export class GeminiClient implements IAiClient {
             }
 
             // Graceful degradation: If AI completely fails, return at least the regex pattern fixes.
-            const regexFindingsAsFallback: ActionableFinding[] = patternResult.violations.map((v: any) => ({
-                ruleIdOrSection: v.ruleId,
-                category: "Regex Pattern Match",
-                severity: v.severity,
-                line: v.line,
-                issue: v.message,
-                actionableFix: v.suggestion,
-                codeSnippet: v.codeSnippet,
-                isRegexConfirmed: true,
-            }));
-
             return {
                 filename: filename || 'unknown',
                 score: patternResult.score,
                 grade: patternResult.grade,
                 aiEnhanced: false,
-                findings: regexFindingsAsFallback,
+                findings: regexFindings,
                 summary: `AI deep analysis failed: ${this.getErrorMessage(error)}. Showing Regex-only results.`,
-                meta: {
-                    regexViolationsFound: patternResult.violations.length,
-                    aiViolationsFound: 0,
-                }
+                meta
             };
         }
     }

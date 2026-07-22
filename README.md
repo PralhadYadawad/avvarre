@@ -28,7 +28,7 @@
 </p>
 
 <p align="center">
-  <em>Auto-detects Cursor · Claude Code · VS Code / Copilot · Antigravity · Zed · OpenCode<br>and installs the MCP server + agent plugins into each one automatically.</em>
+  <em>Auto-detects Codex · Cursor · Claude Code · VS Code / Copilot · Antigravity · Zed · OpenCode<br>and installs the MCP server + agent plugins into each one automatically.</em>
 </p>
 
 ---
@@ -37,10 +37,10 @@
 
 * **Persistent AI Memory Moat:** Keeps your project context intact across chat sessions through version-controlled files inside the local `.avvarre/` directory.
 * **Instant Style Guide Audits:** Locally checks your code against **650+ Google Style Guide rules** in under **100ms** with zero API keys or external cloud dependencies.
-* **AST Code Review Graph:** Uses a SQLite-backed dependency tracker (`web-tree-sitter`) to compute code blast radius and flag downstream testing gaps.
+* **AST Code Review Graph:** Uses a SQLite-backed dependency tracker (`web-tree-sitter`) supporting 11 languages to compute code blast radius, track inheritance hierarchies, and flag downstream testing gaps.
 * **Autopilot Self-Correction Loop:** Enables agents to run `/avvarre-autopilot` to autonomously resolve violations until reaching a **Grade A (90+)** quality score.
 * **Lifecycle Hooks Integration:** Hooks directly into bootstrap, prompt loading, impact warnings, and session syncing stages of modern IDE interfaces.
-* **IDE & Client Portability:** Installs as an MCP server compatible with **Cursor**, **Claude Code**, **Antigravity 2.0**, **VS Code + GitHub Copilot**, **OpenCode**, and **Zed**.
+* **IDE & Client Portability:** Installs as an MCP server compatible with **Codex**, **Cursor**, **Claude Code**, **Antigravity 2.0**, **VS Code + GitHub Copilot**, **OpenCode**, and **Zed**.
 
 ---
 
@@ -50,14 +50,14 @@
 * **Runtime:** Node.js
 * **Parsing Engine:** `web-tree-sitter` (Wasm-based Abstract Syntax Tree parsing)
 * **Database:** SQLite (built-in via `node:sqlite`)
-* **Supported Environments:** Cursor, Claude Code, VS Code / GitHub Copilot, Antigravity 2.0, OpenCode, Zed, Claude Desktop
+* **Supported Environments:** Codex, Cursor, Claude Code, VS Code / GitHub Copilot, Antigravity 2.0, OpenCode, Zed, Claude Desktop
 
 ---
 
 ## 🚀 Getting Started
 
 ### 1. Prerequisites
-Ensure you have **Node.js** (v18 or higher) and **npm** installed on your local environment.
+Ensure you have **Node.js** (v22.5 or higher) and **npm** installed on your local environment. Node 22.5+ is required for the built-in `node:sqlite` module used by the AST graph engine.
 
 ### 2. Installation
 Initialize all compatible local IDE configurations in a single command:
@@ -87,6 +87,10 @@ To target specific IDEs and environments, use the corresponding CLI flags:
   ```bash
   npx -y avvarre@latest install --opencode
   ```
+* **Codex**: 
+  ```bash
+  npx -y avvarre@latest install --codex
+  ```
 
 ---
 
@@ -100,6 +104,13 @@ Trigger avvarre directly inside your editor or terminal prompt chat:
 * `/avvarre-init` - Initialize the local `.avvarre/` directory in your workspace.
 * `/avvarre-autopilot` - Start the autonomous quality remediation loop.
 * `/avvarre-garden` - Audit the persistent memory directory for context drift and stale tasks.
+
+In Codex, these workflows are bundled as Avvarre skills. Select them from the skill picker or invoke them explicitly with `$avvarre`, `$avvarre-init`, `$avvarre-workspace`, `$avvarre-pr`, `$avvarre-autopilot`, or `$avvarre-garden`.
+
+### CLI Commands
+avvarre can be executed directly from your terminal:
+* `npx avvarre install [--global|--local|--both] [--cursor] [--claude] [--vscode] [--opencode] [--codex] [--antigravity]` - Install the MCP server configuration and agent plugins into your IDEs.
+* `npx avvarre check --file <path> [--format score-only|full]` - Quickly analyze and check the quality score and violations of a specific file.
 
 ### MCP Tools
 avvarre exposes several MCP tools that can be invoked programmatically:
@@ -155,7 +166,7 @@ avvarre operates across 8 layers to lock down quality and context:
   * *Impact Warn:* AST-aware pre-tool hook checks blast radius of edited files and alerts on downstream risks.
   * *Session Sync & Doc Gardening:* Writes `session-log.md` when the agent exits/goes idle, runs automated context/conventions/tasks freshness audits, and displays warnings to prevent memory rot.
 * **Layer 7: IDE Portability** — One MCP server powers all major AI dev clients: Claude Code, OpenCode, Antigravity 2.0, VS Code + GitHub Copilot, Cursor, Zed, and Claude Desktop.
-* **Layer 8: AST Code Review Graph** — SQLite-backed dependency graph tracer (`CALLS`, `TESTED_BY`, `IMPORTS_FROM`) across TypeScript, Go, and Python. Calculates blast radius via recursive CTE queries prior to edits.
+* **Layer 8: AST Code Review Graph** — SQLite-backed dependency graph tracer (`CALLS`, `IMPORTS_FROM`, `INHERITS`, `TESTED_BY`) across **11 languages** (JavaScript, TypeScript, Python, Go, Java, C#, C++, Shell, Kotlin, Swift, Objective-C). Calculates blast radius via recursive CTE queries prior to edits.
 
 ```mermaid
 graph TD
@@ -206,30 +217,33 @@ graph TD
 ### 🗄️ Database Schema (`graph.db`)
 Stored locally using `node:sqlite`, the schema tracks code declarations and relationships:
 * **`nodes`**: Tracks declarations of files, classes, methods, and functions.
-  * `kind`: `'File'`, `'Class'`, `'Function'`, `'Type'`, `'Test'`
+  * `kind`: `'File'`, `'Class'`, `'Function'`, `'Test'`
   * `qualified_name`: Uniquely namespace-scoped identifier (e.g. `src/server.ts::Router::handleRequest`)
   * `file_hash`: SHA-256 hash of the containing file's text content, enabling incremental parsing.
 * **`edges`**: Tracks structural links between symbols.
-  * `kind`: `'CALLS'` (invocation), `'IMPORTS_FROM'` (imports), `'INHERITS'` (subclassing), `'TESTED_BY'` (tests mapping).
-  * `source_qualified` & `target_qualified`: Connecting node references.
+  * `kind`: `'CALLS'` (invocations), `'IMPORTS_FROM'` (module imports / `#include` / `source`), `'INHERITS'` (class inheritance / interface implementation), `'TESTED_BY'` (test-to-production mapping via call-graph + name heuristics).
+  * `source_qualified` & `target_qualified`: Connecting node references using the `filePath::Class::method` qualified-name scheme.
 
 ### 🛠️ High-Performance AST Extraction
-The AST parsing engine ([parser.ts](./src/graph/parser.ts)) uses WebAssembly grammars (`web-tree-sitter`) loaded dynamically on-demand from `tree-sitter-wasms`.
-* **Namespace Scoping:** When traversing the parse tree, a `scopeStack` maintains namespace hierarchy (joining names via `::`).
+The AST parsing engine ([parser.ts](./src/graph/parser.ts)) uses WebAssembly grammars (`web-tree-sitter`) loaded dynamically on-demand from `tree-sitter-wasms`. It supports **11 languages**: JavaScript, TypeScript (+ TSX), Python, Go, Java, C#, C++, Shell (Bash), Kotlin, Swift, and Objective-C.
+* **Language-Accurate Extraction:** Each language uses its verified grammar node types (probed empirically). Classes, functions, tests, imports, and inheritance chains are extracted per language's AST shape—not via regex.
+* **Three Edge Types:** `CALLS` (callee names stripped to bare identifiers for cross-file join), `IMPORTS_FROM` (module paths cleaned of quotes), and `INHERITS` (base class / interface names). `TESTED_BY` edges are synthesised post-indexing by `updateTestedByEdges()`.
+* **Namespace Scoping:** A `scopeStack` maintains the `filePath::Class::method` hierarchy as the AST is walked depth-first.
 * **Incremental Hashing Moat:** On every workspace scan or pre-tool file edit hook, the engine checks the file's current SHA-256 hash. If it matches the database record, the parser bypasses parsing entirely—reducing re-indexing overhead to **<5ms** per file and preventing context scanning latency.
 
 ### 📈 Change Risk Calculation Formula
 When files are edited, avvarre calculates risk based on test coverage, security tags, and downstream calls:
 
-$$\text{Risk Score} = \text{Coverage Penalty} + \text{Security Multiplier} + \text{Fan-in Load}$$
+$$\text{Risk Score} = (\text{Coverage Penalty} + \text{Fan-in Load}) \times \text{Security Multiplier}$$
 
-1. **Test Coverage Penalty (30% weight):**
-   * Symbol lacks `TESTED_BY` edges: **+0.30** penalty.
-   * Symbol is covered: **+0.05**.
-2. **Security Sensitivity Multiplier (20% weight):**
-   * Name matches sensitive tokens (`auth`, `login`, `crypt`, `key`, `pass`, `token`, `secr`, `admin`, `jwt`, `pay`, `wallet`, `db`, `sql`, `hash`): **+0.20** penalty.
-3. **Fan-in Call-Graph Load (10% weight):**
+1. **Test Coverage Penalty:**
+   * Symbol lacks `TESTED_BY` edges: **0.30** penalty.
+   * Symbol is covered: **0.05** penalty.
+2. **Fan-in Call-Graph Load:**
    * Caller count (incoming `CALLS` edges): adds `Math.min(callerCount / 20.0, 0.10)`.
+3. **Security Multiplier:**
+   * Name matches sensitive tokens (`auth`, `login`, `credential`, `password`, `passphrase`, `token`, `secret`, `admin`, `jwt`, `wallet`, `session`, `encrypt`, `decrypt`, `privatekey`, `private_key`, `apikey`, `api_key`, `oauth`, `sshkey`): **2.5x** multiplier.
+   * Otherwise: **1.0x** multiplier.
 
 *The final risk score is normalized and clamped strictly between `0.0` and `1.0`.*
 
@@ -354,6 +368,11 @@ Add avvarre to your Cursor MCP settings panel:
 * **Type:** `command`
 * **Command:** `npx -y avvarre@latest`
 
+#### Codex
+You can automatically set up the Codex plugin using the installer (`npx -y avvarre@latest install --codex`). Alternatively, this repository includes a Codex plugin at [`plugins/avvarre`](./plugins/avvarre/) and a repository marketplace at [`.agents/plugins/marketplace.json`](./.agents/plugins/marketplace.json). Open the repository in the ChatGPT desktop app, restart it, select **Avvarre Plugins**, and install **Avvarre**. Review and trust the bundled hooks before they run.
+
+For a Git-backed marketplace, add the repository with `codex plugin marketplace add PralhadYadawad/avvarre`, then install `avvarre` from the `avvarre` marketplace. Public availability uses the official plugin submission portal.
+
 #### Antigravity 2.0 (IDE & CLI)
 Copy `antigravity-plugin/` to:
 * **Workspace:** `.agents/plugins/avvarre`
@@ -389,7 +408,7 @@ The `@avvarre-reviewer` agent acts as a virtual auditor inside your chat workspa
 
 ### 🔍 Under the Hood
 * **Hardened Tokenizer:** The `getCleanLines` utility strips out comments and raw strings before rules execute. This eliminates false positives triggered by URLs in strings or notes in comments.
-* **Semantic Chunking:** Files exceeding LLM token capacities are safely split using a token-boundary chunker ([chunker.ts](./src/ai/chunker.ts)), reviewed individually, and merged.
+* **AST-Aware Chunker:** Files exceeding LLM token capacities (~500 lines) are safely split at class/function AST boundaries using a parser-driven chunker ([chunker.ts](./src/ai/chunker.ts)) across all 11 supported languages, reviewed individually per chunk, and merged with corrected line numbers. Falls back to line-based splitting if AST parsing is unavailable.
 * **Direct Resources:** Every language style guide exposes rules as a `avvarre://rules/{language}` resource endpoint for agents to query.
 
 ### 📝 The Compressed Task Protocol
