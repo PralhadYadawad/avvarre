@@ -1,6 +1,6 @@
 {
   "name": "avvarre",
-  "version": "0.5.12",
+  "version": "0.5.14",
   "description": "Harness the true power of agentic coding. Stop re-explaining context to your AI. Just Avvarre it: persistent memory, 650+ style rules, and self-correcting autopilot loops for autonomous agents.",
   "type": "module",
   "main": "dist/index.js",
