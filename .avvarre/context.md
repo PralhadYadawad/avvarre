@@ -247,7 +247,7 @@ avvarre/
 │   ├── hooks.json           # Antigravity hooks (PreInvocation, PreToolUse, Stop)
 │   ├── agents/              # Subagent definitions (avvarre-reviewer.md)
 │   ├── rules/               # Workspace style guide rules (avvarre.md)
-│   ├── skills/              # Skills converting to slash commands (/avvarre, /avvarre-init, etc.)
+│   ├── skills/              # Skills converting to slash commands (/avvarre, /avvarre:init, etc.)
 │   └── scripts/             # Hook scripts (hook-pre-invocation.cjs, hook-impact-warn.cjs, hook-session-end.cjs)
 ├── opencode-plugin/          # OpenCode extension plugin
 │   ├── plugin.json          # Manifest (name: opencode-avvarre)

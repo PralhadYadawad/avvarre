@@ -1,9 +1,9 @@
 ---
-name: avvarre-autopilot
+name: avvarre:autopilot
 description: Autonomous fix-verify loop that keeps fixing violations until the file reaches Grade A (90+).
 ---
 
-# /avvarre-autopilot
+# /avvarre:autopilot
 
 Autonomously fix a file until it reaches **Grade A (score 90+)**.
 

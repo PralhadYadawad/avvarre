@@ -70,7 +70,7 @@ Expand the step chain into your internal memory:
 
 ## Autopilot Mode
 
-Use `/avvarre-autopilot` for autonomous fix-verify loops:
+Use `/avvarre:autopilot` for autonomous fix-verify loops:
 - Scans → fixes highest-severity violation → re-verifies → repeats until score 90+
 - Uses `#rename` for naming violations instead of manual find-replace
 - Max 15 iterations safety cap.

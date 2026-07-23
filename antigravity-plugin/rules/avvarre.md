@@ -38,7 +38,7 @@ avvarre MCP tools enforce 650+ rules at analysis time. Use `/avvarre` on the act
 
 ## Before Committing
 
-Run `/avvarre-pr` to scan only changed files. Aim for score 85+ per file. Fix any critical or high violations before pushing.
+Run `/avvarre:pr` to scan only changed files. Aim for score 85+ per file. Fix any critical or high violations before pushing.
 
 ## Project Memory
 

@@ -1,9 +1,9 @@
 ---
-name: avvarre-garden
+name: avvarre:garden
 description: Audit the workspace persistent memory folders (.avvarre/) to detect context drift, conventions mismatch, and stalled task lists.
 ---
 
-# avvarre-garden — Memory Gardening Skill
+# avvarre:garden — Memory Gardening Skill
 
 Audits the workspace persistent memory folders (`.avvarre/`) to detect context drift, conventions mismatch, and stalled task lists.
 
@@ -15,4 +15,4 @@ Audits the workspace persistent memory folders (`.avvarre/`) to detect context d
    - **Conventions Drift** (style violations in sampled files)
    - **Stale Tasks** (in-progress > 7 days, unstarted > 30 days)
    - **Log Freshness** (no entries in last 7 days)
-3. **Remediation** — update `.avvarre/` context, conventions, tasks, and log files as suggested to eliminate rot.
+3. **Offer Remediation** — offer to automatically apply the suggestions to update `.avvarre/` files. Only edit if the user agrees.

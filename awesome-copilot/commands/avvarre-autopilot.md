@@ -1,9 +1,9 @@
 ---
-name: avvarre-autopilot
+name: avvarre:autopilot
 description: Autonomous fix-verify loop that keeps fixing violations until the file reaches Grade A (90+).
 ---
 
-# /avvarre-autopilot
+# /avvarre:autopilot
 
 Autonomously fix a file until it reaches **Grade A (score 90+)**.
 
@@ -14,11 +14,11 @@ Autonomously fix a file until it reaches **Grade A (score 90+)**.
 3. **Loop:**
    a. If score >= 90 → go to step 4
    b. Pick the highest-severity violation
-   c. Fix it using the suggested fix
+   c. Fix it using the suggested fix. For naming violations, use the `#rename` tool for safe project-wide renames instead of manual find-replace.
    d. Run `avvarre_file` again → record new score
    e. If score decreased or is unchanged after 3 consecutive iterations → stop loop, report blocker
    f. Repeat from 3a
-4. **Done:** Report before/after scores and total violations fixed
+4. **Done:** Report before/after scores and total violations fixed.
 
 ## Guardrails
 

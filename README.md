@@ -38,7 +38,7 @@
 * **Persistent AI Memory Moat:** Keeps your project context intact across chat sessions through version-controlled files inside the local `.avvarre/` directory.
 * **Instant Style Guide Audits:** Locally checks your code against **650+ Google Style Guide rules** in under **100ms** with zero API keys or external cloud dependencies.
 * **AST Code Review Graph:** Uses a SQLite-backed dependency tracker (`web-tree-sitter`) supporting 11 languages to compute code blast radius, track inheritance hierarchies, and flag downstream testing gaps.
-* **Autopilot Self-Correction Loop:** Enables agents to run `/avvarre-autopilot` to autonomously resolve violations until reaching a **Grade A (90+)** quality score.
+* **Autopilot Self-Correction Loop:** Enables agents to run `/avvarre:autopilot` to autonomously resolve violations until reaching a **Grade A (90+)** quality score.
 * **Lifecycle Hooks Integration:** Hooks directly into bootstrap, prompt loading, impact warnings, and session syncing stages of modern IDE interfaces.
 * **IDE & Client Portability:** Installs as an MCP server compatible with **Codex**, **Cursor**, **Claude Code**, **Antigravity 2.0**, **VS Code + GitHub Copilot**, **OpenCode**, and **Zed**.
 
@@ -99,13 +99,13 @@ To target specific IDEs and environments, use the corresponding CLI flags:
 ### Slash Commands
 Trigger avvarre directly inside your editor or terminal prompt chat:
 * `/avvarre` - Audit the currently active file.
-* `/avvarre-workspace` - Perform a full repository quality and memory scan.
-* `/avvarre-pr` - Audit staged files before commit.
-* `/avvarre-init` - Initialize the local `.avvarre/` directory in your workspace.
-* `/avvarre-autopilot` - Start the autonomous quality remediation loop.
-* `/avvarre-garden` - Audit the persistent memory directory for context drift and stale tasks.
+* `/avvarre:workspace` - Perform a full repository quality and memory scan.
+* `/avvarre:pr` - Audit staged files before commit.
+* `/avvarre:init` - Initialize the local `.avvarre/` directory in your workspace.
+* `/avvarre:autopilot` - Start the autonomous quality remediation loop.
+* `/avvarre:garden` - Audit the persistent memory directory for context drift and stale tasks.
 
-In Codex, these workflows are bundled as Avvarre skills. Select them from the skill picker or invoke them explicitly with `$avvarre`, `$avvarre-init`, `$avvarre-workspace`, `$avvarre-pr`, `$avvarre-autopilot`, or `$avvarre-garden`.
+In Codex, these workflows are bundled as Avvarre skills. Select them from the skill picker or invoke them explicitly with `$avvarre`, `$avvarre:init`, `$avvarre:workspace`, `$avvarre:pr`, `$avvarre:autopilot`, or `$avvarre:garden`.
 
 ### CLI Commands
 avvarre can be executed directly from your terminal:

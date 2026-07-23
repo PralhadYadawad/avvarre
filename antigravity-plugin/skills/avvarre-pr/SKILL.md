@@ -1,15 +1,15 @@
 ---
-name: avvarre-pr
+name: avvarre:pr
 description: Quality gate scanning for git-changed files. Enforces style guides prior to commits or PR submissions.
 ---
 
-# avvarre-pr — Pull Request Quality Gate
+# avvarre:pr — Pull Request Quality Gate
 
-Analyzes only the files modified in the current branch compared to main/staging, or the unstaged files in the working tree.
+Analyzes only the files modified in the git diff against the current branch.
 
 ## PR Scanning Workflow
 
-1.  **Detect Changes**: Execute `avvarre_pr` to scan git-changed files.
-2.  **Verify Score**: Ensure all modified files score **85+** (good) or **95+** (excellent).
-3.  **Fix Blockers**: Rectify any critical or high violations before attempting to commit or open a pull request.
-4.  **Confirm**: Re-run `avvarre_pr` to ensure the quality gate passes.
+1. **Scan Changes**: Execute `avvarre_pr` with the workspace root. Optionally pass `minScoreThreshold` (default 80).
+2. **Report Results**: Show whether the PR **passes** or **fails**. List files below threshold with their scores.
+3. **Flag Blockers**: Flag any critical or high violations as blockers and offer to fix them with `/avvarre:autopilot`.
+4. **Confirm**: Re-run `avvarre_pr` after fixes to ensure the quality gate passes.

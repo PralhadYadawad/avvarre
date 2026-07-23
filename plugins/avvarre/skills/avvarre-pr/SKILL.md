@@ -1,5 +1,5 @@
 ---
-name: avvarre-pr
+name: avvarre:pr
 description: Run Avvarre's quality gate on files changed in the current Git workspace.
 ---
 
@@ -7,4 +7,4 @@ description: Run Avvarre's quality gate on files changed in the current Git work
 
 Use this workflow before a commit, pull request, or merge.
 
-Call the Avvarre MCP tool `avvarre_pr` with the absolute workspace root. Use its default score threshold of 80 unless the user provides another threshold. Report the pass/fail result, affected files, scores, and violations. Treat critical and high findings as blockers; offer a focused fix-and-reverify pass for the failing files.
+Call the Avvarre MCP tool `avvarre_pr` with the absolute workspace root. Optionally pass `minScoreThreshold` (default is 80). Report the pass/fail result, affected files, scores, and violations. Treat critical and high findings as blockers and offer to fix them with `/avvarre:autopilot`. Re-run `avvarre_pr` after fixes to confirm the gate passes.

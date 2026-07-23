@@ -14,4 +14,4 @@ Read the returned JSON payload. Present the results prominently:
 - Group violations by **severity** (critical → high → medium → low)
 - For each violation display: line number, rule ID, message, and the suggested fix
 
-Offer to fix violations starting with the highest severity. Apply fixes immediately without asking for permission.
+Offer to fix violations starting with the highest severity.

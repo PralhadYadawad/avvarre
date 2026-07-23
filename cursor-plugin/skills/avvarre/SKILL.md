@@ -69,7 +69,7 @@ Tasks in `.avvarre/tasks.md` use **compressed format** — one line per feature,
 
 ## Autopilot Mode
 
-Use `/avvarre-autopilot` for autonomous fix-verify loops:
+Use `/avvarre:autopilot` for autonomous fix-verify loops:
 - Scans → fixes highest-severity violation → re-verifies → repeats until score 90+
 - Max 15 iterations safety cap
 

@@ -11,7 +11,7 @@ Your AI forgets the project every session. It ignores your style guide. It gener
 - **Persistent memory** -- `.avvarre/` committed to git. Context, conventions, tasks, session logs. Dev A works Monday, Dev B pulls Tuesday, the AI already knows.
 - **650+ Google Style Guide rules** -- 21 languages. Local regex scan in <100ms. No API key. No cloud.
 - **AI deep review** -- Catches what rules can't: misleading docstrings, logic smells, architectural anti-patterns. Gemini, OpenAI, Groq, Ollama -- or skip it entirely. Silent fallback.
-- **Autopilot** -- `/avvarre-autopilot` picks the worst violation, fixes it, re-verifies, repeats. Grade A or 15 iterations. No babysitting.
+- **Autopilot** -- `/avvarre:autopilot` picks the worst violation, fixes it, re-verifies, repeats. Grade A or 15 iterations. No babysitting.
 - **25x less context** -- Targeted skill files (~8K tokens) instead of dumping your whole repo (200K+).
 - **Every IDE** -- One MCP server. VS Code, Cursor, Claude Code, Claude Desktop, any MCP client. Same `.avvarre/` memory everywhere.
 
@@ -32,7 +32,7 @@ Switch machines. Switch developers. Switch IDEs. The AI picks up where the last 
 
 ### Executable Memory (Skills)
 
-`/avvarre-init` generates targeted skill files in `.avvarre/skills/` based on your stack -- React guidelines, Node API patterns, database schema rules. The AI loads only the relevant skill for the current task instead of your entire codebase.
+`/avvarre:init` generates targeted skill files in `.avvarre/skills/` based on your stack -- React guidelines, Node API patterns, database schema rules. The AI loads only the relevant skill for the current task instead of your entire codebase.
 
 ### Smart Skill Detection
 
@@ -69,11 +69,11 @@ For optional AI deep review, add env vars to `.vscode/mcp.json`:
 | Command | What it does |
 |---------|-------------|
 | `/avvarre` | Analyze the active file -- score, violations by severity, exact fixes |
-| `/avvarre-init` | Set up `.avvarre/` project memory (detects your stack, generates skill files) |
-| `/avvarre-workspace` | Audit the entire project -- heatmap ranked worst-to-best |
-| `/avvarre-pr` | Quality gate on git-changed files only |
-| `/avvarre-autopilot` | Autonomous fix-verify loop until Grade A (90+) |
-| `/avvarre-garden` | Audit `.avvarre/` memory for context drift, stale tasks, and conventions mismatches |
+| `/avvarre:init` | Analyse workspace, scaffold `.avvarre/` with real project context and conventions |
+| `/avvarre:workspace` | Audit the entire project -- heatmap ranked worst-to-best |
+| `/avvarre:pr` | Quality gate on git-changed files only |
+| `/avvarre:autopilot` | Autonomous fix-verify loop until Grade A (90+) |
+| `/avvarre:garden` | Audit `.avvarre/` memory for context drift, stale tasks, and conventions mismatches |
 
 ## MCP Tools
 

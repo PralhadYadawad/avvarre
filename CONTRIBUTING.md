@@ -81,7 +81,7 @@ When updating `.avvarre/tasks.md`, use compressed format:
 
 ## Pull Requests
 
-1. Run `/avvarre-pr` or use the `avvarre_pr` MCP tool before submitting
+1. Run `/avvarre:pr` or use the `avvarre_pr` MCP tool before submitting
 2. All PRs target the `master` branch
 3. Include test files for new rules
 4. Update `.avvarre/tasks.md` if your change completes or adds tasks

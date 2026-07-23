@@ -12,7 +12,7 @@ tags: ['code-quality', 'memory', 'session-logging', 'automation']
 
 | Hook | Event | What It Does |
 |------|-------|-------------|
-| Bootstrap | SessionStart | Checks if `.avvarre/` exists, suggests `/avvarre-init` if missing |
+| Bootstrap | SessionStart | Checks if `.avvarre/` exists, suggests `/avvarre:init` if missing |
 | Context Loader | SessionStart | Loads conventions, last session log, pending tasks, and available skills |
 | Skill Suggest | SessionStart | Auto-detects tech stack (3-layer: manifests, configs, extensions), suggests community skills |
 | Session End | Stop | Phase 1: reminds AI to update tasks/context. Phase 2: logs session to `session-log.md` |

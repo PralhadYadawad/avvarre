@@ -8,7 +8,8 @@ Call the `avvarre_garden` tool from the `avvarre` MCP server with:
 
 Report all alerts found, grouped by category:
 1. **Context drift** — directories not described in `context.md`
-2. **Stale tasks** — in-progress tasks older than 7 days or pending tasks older than 30 days
-3. **Session log freshness** — whether the session log is outdated
+2. **Broken conventions** — files violating the conventions in `.avvarre/conventions.md`
+3. **Stale tasks** — in-progress tasks older than 7 days or pending tasks older than 30 days
+4. **Session log freshness** — whether the session log is outdated
 
-For each alert, suggest a concrete action to resolve it.
+For each alert, suggest a concrete action to resolve it. Offer to automatically apply the suggestions to update the files in `.avvarre/` if requested.

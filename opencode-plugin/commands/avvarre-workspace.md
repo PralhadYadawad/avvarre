@@ -8,4 +8,4 @@ Call the `avvarre_workspace` tool from the `avvarre` MCP server with:
 - `language`: detect the dominant programming language in the project and set it accordingly
 - `include_trends`: true (to show score history)
 
-Summarize the heatmap results, highlight the lowest-scoring files, note any improving or declining trends, and recommend which files to address first.
+Summarize the heatmap results: show the overall score and grade, highlight the lowest-scoring files, note any improving or declining trends. Offer to fix the worst-scoring files first, one at a time.

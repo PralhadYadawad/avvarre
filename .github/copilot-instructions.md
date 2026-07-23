@@ -38,7 +38,7 @@ No API key = regex-only mode. Never crashes from missing config.
 - Follow the architectural rules in that skill file while coding
 
 ## On Picking Up Work
-- If no `.avvarre/` directory exists, suggest: "Run /avvarre-init to set up project memory."
+- If no `.avvarre/` directory exists, suggest: "Run /avvarre:init to set up project memory."
 - Read `.avvarre/session-log.md` and `.avvarre/tasks.md` first
 - Expand step chains from tasks.md into your internal working memory
 - Read `.avvarre/conventions.md` before writing code

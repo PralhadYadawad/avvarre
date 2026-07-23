@@ -14,24 +14,25 @@ Enforces **Google style guides** across 21 languages/formats via regex + optiona
 
 | Tool | When to Use |
 |------|-------------|
-| `avvarre_file` | Analyze a single file — returns score, violations, fix suggestions. Falls back to regex-only if no API key. Pass `workspaceRoot` to auto-log to history. |
-| `avvarre_workspace` | Scan all files in a directory — returns heatmap, score trends, and optional badge. Configurable via `ai_depth`, `include_badge`, `include_trends`. |
+| `avvarre_file` | Analyze a single file — returns score, violations, fix suggestions. Pass code, language, filename, and workspaceRoot. Falls back to regex-only if no API key. |
+| `avvarre_workspace` | Scan all files in a directory — returns heatmap, score trends, and optional badge. Pass directory, language, include_trends. |
 | `list_rules` | Show all active rules for a language |
-| `avvarre_pr` | Scan only git-changed files (quality gate). Takes optional `minScoreThreshold` (default 80). |
+| `avvarre_pr` | Scan only git-changed files (quality gate). Pass workspaceRoot, optional minScoreThreshold (default 80). |
 | `scaffold_avvarre` | Initialize `.avvarre/` directory with project memory templates |
-| `setup_claude_code` | Bootsrap Claude Code — creates `.claude/`, `.avvarre/`, and `CLAUDE.md` in one command |
-| `suggest_skills` | Auto-detect stack, fetch community skills. Use detect/fetch/decline actions; declines are saved to `.declined.json`. |
-| `avvarre_get_impact` | Queries AST graph. Returns `riskScore`, `reviewPriorities`, `testGaps`, and impacted files. |
-| `avvarre_garden` | Audits workspace persistent memory folders for drift and stale tasks |
+| `setup_claude_code` | Bootstrap Claude Code — creates `.claude/`, `.avvarre/`, and `CLAUDE.md` |
+| `suggest_skills` | Auto-detect stack, fetch community skills |
+| `avvarre_get_impact` | Query AST graph for blast radius, risk scores, and test gaps |
+| `avvarre_garden` | Audit workspace persistent memory for drift and stale tasks |
 
 ---
 
 ## Core Workflow: Fix-Verify Loop
 
-1.  **Scan** — run `avvarre_file` on the target file.
-2.  **Fix by severity** — critical → high → medium → low.
-3.  **Re-verify** — run `avvarre_file` again after fixes.
-4.  **Iterate** — repeat until score reaches 85+ (good) or 95+ (excellent).
+1. **Scan** — run `avvarre_file` on the target file.
+2. **Present** — show the quality score prominently, group violations by severity.
+3. **Offer to fix** — starting with the highest severity.
+4. **Re-verify** — run `avvarre_file` again after fixes.
+5. **Iterate** — repeat until score reaches 90+ (Grade A).
 
 **Never skip re-verification.** Fixes can introduce new violations.
 

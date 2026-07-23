@@ -1,7 +1,8 @@
 {
   "name": "opencode-avvarre",
-  "version": "0.1.0",
+  "version": "0.5.1",
   "description": "Dependencies for Avvarre OpenCode plugin",
+  "type": "module",
   "dependencies": {
     "@opencode-ai/plugin": "^1.0.0",
     "zod": "^3.22.0"

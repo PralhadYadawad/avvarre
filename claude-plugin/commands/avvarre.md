@@ -9,8 +9,12 @@ Analyze the **currently active file** for code quality.
 
 ## Instructions
 
-1. Determine the currently open file
-2. Use the `avvarre_file` MCP tool with that file path
+1. Determine the currently open file and its language from the filename extension
+2. Call the `avvarre_file` MCP tool with:
+   - `code`: the full source code of the file
+   - `language`: the programming language
+   - `filename`: the filename
+   - `workspaceRoot`: the absolute workspace root
 3. Present the results:
    - Show the **quality score** prominently
    - Group violations by **severity** (critical → high → medium → low)

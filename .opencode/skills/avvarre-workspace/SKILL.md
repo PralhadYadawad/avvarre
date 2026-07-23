@@ -1,0 +1,15 @@
+---
+name: avvarre-workspace
+description: Scan the entire workspace for code quality issues and show a heatmap of scores
+license: MIT
+compatibility: opencode
+metadata:
+  audience: developers
+  workflow: review
+---
+Call the `avvarre_workspace` tool from the `avvarre` MCP server with:
+- `directory`: absolute path of the current workspace root directory
+- `language`: detect the dominant programming language and set it accordingly
+- `include_trends`: true (to show score history)
+
+Summarize the heatmap results: show the overall score and grade, highlight the lowest-scoring files, note any improving or declining trends. Offer to fix the worst-scoring files first, one at a time using the avvarre skill.
